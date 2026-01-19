@@ -8,6 +8,7 @@ import 'recording_screen.dart';
 import 'archive_screen.dart';
 import 'settings_screen.dart';
 import 'compliance_screen.dart';
+import '../providers/transcript_provider.dart';
 
 /// Home Screen
 /// Main dashboard showing recent consultations and quick actions

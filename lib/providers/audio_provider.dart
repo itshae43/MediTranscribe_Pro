@@ -118,6 +118,7 @@ class RecordingStateNotifier extends StateNotifier<RecordingState> {
     final audioService = _ref.read(audioServiceProvider);
     await audioService.resumeRecording();
     state = state.copyWith(isPaused: false);
+    _startDurationTimer();
   }
 
   /// Update amplitude

@@ -14,7 +14,10 @@ class ScribeService {
   final String apiKey;
   final Logger _logger = Logger();
 
+  WebSocketChannel? _channel;
+  StreamController<String>? _transcriptController;
   StreamController<String>? _partialTranscriptController;
+  StreamController<List<Map<String, String>>>? _speakerLabelsController;
   
   bool _isConnected = false;
   bool _isConnecting = false;

@@ -110,6 +110,7 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
   Widget build(BuildContext context) {
     final recordingState = ref.watch(recordingStateProvider);
     final transcriptState = ref.watch(transcriptStateProvider);
+    final amplitudeAsync = ref.watch(amplitudeProvider);
 
     // Auto-scroll to bottom when new content arrives
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -211,7 +212,7 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
                 const SizedBox(height: 12),
                 SizedBox(
                   height: 48,
-                  child: _buildWaveform(recordingState.amplitude),
+                  child: _buildWaveform(amplitudeAsync),
                 ),
               ],
             ),
@@ -451,31 +452,52 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
     );
   }
 
-  Widget _buildWaveform(double amplitude) {
+  Widget _buildWaveform(AsyncValue<double> amplitudeAsync) {
+    final amplitude = amplitudeAsync.when(
+      data: (val) => val,
+      loading: () => -160.0,
+      error: (_, __) => -160.0,
+    );
+
     // Normalize amplitude to 0-1 range
     final normalizedAmp = ((amplitude + 60) / 60).clamp(0.0, 1.0);
     
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: List.generate(24, (index) {
-        // Create a symmetric wave effect from center
-        final distanceFromCenter = (index - 11.5).abs();
-        final baseHeight = 12.0;
-        final variableHeight = 36.0 * normalizedAmp * (1 - (distanceFromCenter / 12));
-        final height = (baseHeight + variableHeight).clamp(8.0, 48.0);
-        
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 100),
-          margin: const EdgeInsets.symmetric(horizontal: 2),
-          width: 4,
-          height: height,
-          decoration: BoxDecoration(
-            color: const Color(0xFF00C853).withOpacity(0.8),
-            borderRadius: BorderRadius.circular(4),
-          ),
+    // Use the pulse controller to add some "breathing" even when silent
+    // and random factors for dynamic feel
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: List.generate(24, (index) {
+            // Create a symmetric wave effect from center
+            final distanceFromCenter = (index - 11.5).abs();
+            
+            // Base "breathing" height
+            final breathing = 8.0 + (_pulseController.value * 4);
+            
+            // Dynamic height based on amplitude
+            // Add some randomness per bar to make it look organic
+            final randomFactor = (index * 7 % 3) * 2.0; 
+            
+            final variableHeight = 40.0 * normalizedAmp * (1 - (distanceFromCenter / 14));
+            
+            final height = (breathing + variableHeight - randomFactor).clamp(4.0, 48.0);
+            
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 50),
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              width: 4,
+              height: height,
+              decoration: BoxDecoration(
+                color: const Color(0xFF00C853).withOpacity(0.8),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            );
+          }),
         );
-      }),
+      },
     );
   }
 
