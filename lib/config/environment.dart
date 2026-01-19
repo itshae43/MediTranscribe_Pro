@@ -8,8 +8,10 @@ class Environment {
   
   static String get elevenLabsApiKey => dotenv.env['ELEVENLABS_API_KEY'] ?? '';
   
+  // ElevenLabs Realtime Speech-to-Text WebSocket endpoint
+  // Docs: https://elevenlabs.io/docs/api-reference/speech-to-text/v-1-speech-to-text-realtime
   static String get scribeEndpoint => dotenv.env['SCRIBE_V2_ENDPOINT'] ?? 
-      'wss://api.elevenlabs.io/v1/speech-to-text/stream';
+      'wss://api.elevenlabs.io/v1/speech-to-text/realtime';
   
   static String get appVersion => dotenv.env['APP_VERSION'] ?? '1.0.0';
   

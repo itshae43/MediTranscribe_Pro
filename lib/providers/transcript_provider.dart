@@ -92,11 +92,12 @@ class TranscriptStateNotifier extends StateNotifier<TranscriptState> {
 
   TranscriptStateNotifier(this._ref) : super(const TranscriptState());
 
-  /// Start transcription
-  void startTranscription({List<String> keyTerms = const []}) {
+  /// Start transcription - NOW ASYNC to wait for WebSocket connection
+  Future<void> startTranscription({List<String> keyTerms = const []}) async {
     final scribeService = _ref.read(scribeServiceProvider);
     
-    _streams = scribeService.startTranscription(keyTerms: keyTerms);
+    // Await the WebSocket connection before proceeding
+    _streams = await scribeService.startTranscription(keyTerms: keyTerms);
     
     state = state.copyWith(
       isTranscribing: true,

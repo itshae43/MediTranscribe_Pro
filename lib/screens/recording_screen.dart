@@ -26,43 +26,51 @@ class RecordingScreen extends ConsumerStatefulWidget {
 }
 
 class _RecordingScreenState extends ConsumerState<RecordingScreen> {
-  late ScribeService _scribeService;
-  bool _isInitialized = false;
+
 
   @override
   void initState() {
     super.initState();
-    _initializeServices();
-  }
-
-  Future<void> _initializeServices() async {
-    _scribeService = ScribeService(apiKey: Environment.elevenLabsApiKey);
-    setState(() => _isInitialized = true);
   }
 
   Future<void> _startRecording() async {
     final recordingNotifier = ref.read(recordingStateProvider.notifier);
     final transcriptNotifier = ref.read(transcriptStateProvider.notifier);
+    final scribeService = ref.read(scribeServiceProvider);
     
-    // Start transcription service
-    transcriptNotifier.startTranscription(
-      keyTerms: ['hypertension', 'diabetes', 'medication', 'treatment'],
-    );
-    
-    // Start audio recording with callback to send to Scribe
-    final success = await recordingNotifier.startRecording(
-      onAudioChunk: (bytes) {
-        _scribeService.sendAudioChunk(bytes);
-      },
-    );
-    
-    if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to start recording. Please check microphone permission.'),
-          backgroundColor: Colors.red,
-        ),
+    try {
+      // Start transcription service and WAIT for WebSocket connection
+      print('🎤 Starting transcription service...');
+      await transcriptNotifier.startTranscription(
+        keyTerms: ['hypertension', 'diabetes', 'medication', 'treatment'],
       );
+      print('✅ Transcription service connected');
+      
+      // Now start audio recording with callback to send to Scribe
+      final success = await recordingNotifier.startRecording(
+        onAudioChunk: (bytes) {
+          scribeService.sendAudioChunk(bytes);
+        },
+      );
+      
+      if (!success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to start recording. Please check microphone permission.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Error starting recording: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to connect to transcription service: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -532,7 +540,8 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
 
   @override
   void dispose() {
-    _scribeService.stopTranscription();
+    // Stop transcription when leaving the screen
+    ref.read(transcriptStateProvider.notifier).stopTranscription();
     super.dispose();
   }
 }

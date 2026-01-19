@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/io.dart';
 import 'package:logger/logger.dart';
 import '../config/environment.dart';
 
-/// Scribe V2 Service
-/// Handles real-time speech-to-text transcription using ElevenLabs Scribe v2 API
+/// Scribe V2 Realtime Service
+/// Handles real-time speech-to-text transcription using ElevenLabs Scribe v2 Realtime API
+/// API Reference: https://elevenlabs.io/docs/api-reference/speech-to-text/v-1-speech-to-text-realtime
 
 class ScribeService {
   final String apiKey;
@@ -17,6 +19,8 @@ class ScribeService {
   StreamController<List<Map<String, String>>>? _speakerLabelsController;
   
   bool _isConnected = false;
+  bool _isConnecting = false;
+  Completer<void>? _connectionCompleter;
   String _currentTranscript = '';
   final List<Map<String, String>> _allSpeakerLabels = [];
 
@@ -33,16 +37,17 @@ class ScribeService {
 
   /// Start real-time transcription stream
   /// Returns: Map with 'transcript' and 'speakerLabels' streams
-  Map<String, Stream> startTranscription({
+  /// NOTE: This is now async and must be awaited before sending audio
+  Future<Map<String, Stream>> startTranscription({
     List<String> keyTerms = const [],
     String languageCode = 'en',
-  }) {
+  }) async {
     _transcriptController = StreamController<String>.broadcast();
     _speakerLabelsController = StreamController<List<Map<String, String>>>.broadcast();
     _currentTranscript = '';
     _allSpeakerLabels.clear();
 
-    _connectWebSocket(keyTerms, languageCode);
+    await _connectWebSocket(keyTerms, languageCode);
 
     return {
       'transcript': _transcriptController!.stream,
@@ -50,55 +55,90 @@ class ScribeService {
     };
   }
 
-  void _connectWebSocket(List<String> keyTerms, String languageCode) {
-    try {
-      final endpoint = Environment.scribeEndpoint;
-      _logger.i('Connecting to Scribe v2: $endpoint');
+  Future<void> _connectWebSocket(List<String> keyTerms, String languageCode) async {
+    if (_isConnecting) {
+      print('⚠️ Already connecting, waiting...');
+      await _connectionCompleter?.future;
+      return;
+    }
 
+    _isConnecting = true;
+    _connectionCompleter = Completer<void>();
+
+    try {
+      // ElevenLabs Realtime STT WebSocket endpoint
+      // Docs: https://elevenlabs.io/docs/api-reference/speech-to-text/v-1-speech-to-text-realtime
+      const baseEndpoint = 'wss://api.elevenlabs.io/v1/speech-to-text/realtime';
+      
       // Build WebSocket URL with query parameters
-      final uri = Uri.parse(endpoint).replace(queryParameters: {
-        'model': 'scribe_v1',
+      final uri = Uri.parse(baseEndpoint).replace(queryParameters: {
+        'model_id': 'scribe_v2_realtime',
         'language_code': languageCode,
+        'audio_format': 'pcm_16000', // PCM 16-bit, 16kHz
+        'commit_strategy': 'vad', // Voice Activity Detection for auto-commit
+        'vad_silence_threshold_secs': '1.5',
+        'vad_threshold': '0.4',
+        'include_timestamps': 'true',
       });
 
-      _channel = WebSocketChannel.connect(uri);
+      print('🔗 [STEP 2.1] Connecting to Scribe v2 Realtime: $baseEndpoint');
+      print('🔗 WebSocket URI: $uri');
+      _logger.i('Connecting to Scribe v2 Realtime: $uri');
+
+      // Connect with API key in header (server-side authentication)
+      _channel = IOWebSocketChannel.connect(
+        uri,
+        headers: {
+          'xi-api-key': apiKey,
+        },
+      );
+
+      // Wait for the WebSocket to be ready
+      print('⏳ Waiting for WebSocket connection...');
+      await _channel!.ready;
+      
       _isConnected = true;
-
-      // Send initialization config
-      final config = {
-        'type': 'config',
-        'api_key': apiKey,
-        'text_encoding': 'utf-8',
-        'try_numerals': true,
-        'language_code': languageCode,
-        'enable_voice_activity_detection': true,
-        'enable_speaker_diarization': true,
-        'num_speakers': 2, // Doctor and Patient
-        if (keyTerms.isNotEmpty) 'keyterm_boost': keyTerms else 'keyterm_boost': _medicalKeyterms,
-      };
-
-      _channel!.sink.add(jsonEncode(config));
-      _logger.i('Scribe v2 config sent');
+      print('✅ WebSocket connected successfully');
+      _logger.i('WebSocket connected successfully');
 
       // Listen for messages
+      print('👂 [STEP 2.3] Listening for WebSocket messages...');
       _channel!.stream.listen(
-        _handleMessage,
+        (message) {
+          print('📨 [STEP 4] RAW MESSAGE RECEIVED');
+          _handleMessage(message);
+        },
         onError: (error) {
+          print('❌ WebSocket error: $error');
           _logger.e('WebSocket error: $error');
           _transcriptController?.addError(error);
           _speakerLabelsController?.addError(error);
           _isConnected = false;
+          _isConnecting = false;
+          if (!_connectionCompleter!.isCompleted) {
+            _connectionCompleter!.completeError(error);
+          }
         },
         onDone: () {
+          print('🔌 WebSocket closed');
           _logger.i('WebSocket closed');
           _isConnected = false;
+          _isConnecting = false;
         },
       );
+
+      _isConnecting = false;
+      _connectionCompleter!.complete();
+      
     } catch (e) {
+      print('❌ Connection error: $e');
       _logger.e('Connection error: $e');
-      _transcriptController?.addError(e);
-      _speakerLabelsController?.addError(e);
       _isConnected = false;
+      _isConnecting = false;
+      if (!_connectionCompleter!.isCompleted) {
+        _connectionCompleter!.completeError(e);
+      }
+      rethrow;
     }
   }
 
@@ -106,100 +146,161 @@ class ScribeService {
     try {
       if (message is String) {
         final data = jsonDecode(message);
-        _logger.d('Received message type: ${data['type']}');
+        final messageType = data['message_type'] ?? data['type'];
+        print('📋 [STEP 4.1] Message type: $messageType');
+        _logger.d('Received message type: $messageType');
 
-        // Handle different message types
-        switch (data['type']) {
-          case 'transcript':
-          case 'transcription':
-            _handleTranscript(data);
+        // Handle different message types based on ElevenLabs Realtime API
+        // Docs: https://elevenlabs.io/docs/api-reference/speech-to-text/v-1-speech-to-text-realtime
+        switch (messageType) {
+          case 'session_started':
+            print('✅ Session started: ${data['session_id']}');
+            print('   Config: ${data['config']}');
+            _logger.i('Session started: ${data['session_id']}');
             break;
-          case 'final':
-            _handleFinalTranscript(data);
+          case 'partial_transcript':
+            print('💬 Processing partial transcript...');
+            _handlePartialTranscript(data);
             break;
-          case 'error':
+          case 'committed_transcript':
+            print('✅ Processing committed transcript...');
+            _handleCommittedTranscript(data);
+            break;
+          case 'committed_transcript_with_timestamps':
+            print('✅ Processing committed transcript with timestamps...');
+            _handleCommittedTranscriptWithTimestamps(data);
+            break;
+          case 'scribe_error':
+          case 'scribe_auth_error':
+          case 'scribe_quota_exceeded_error':
+          case 'scribe_throttled_error':
+          case 'scribe_rate_limited_error':
+            print('❌ Processing error message...');
             _handleError(data);
             break;
           default:
-            _logger.d('Unknown message type: ${data['type']}');
+            print('❓ Unknown message type: $messageType');
+            print('   Full message: $data');
+            _logger.d('Unknown message type: $messageType');
         }
       }
     } catch (e) {
+      print('❌ Message handling error: $e');
       _logger.e('Message handling error: $e');
     }
   }
 
-  void _handleTranscript(Map<String, dynamic> data) {
-    final text = data['text'] ?? data['transcription'] ?? '';
-    final speaker = data['speaker']?.toString().toUpperCase() ?? 'UNKNOWN';
+  void _handlePartialTranscript(Map<String, dynamic> data) {
+    final text = data['text'] ?? '';
+    print('📝 [STEP 4.2] PARTIAL TEXT: "$text"');
+    
+    // Partial transcripts are temporary, don't add to final transcript yet
+    // But we can show them in the UI as "typing indicator"
+    if (text.toString().isNotEmpty) {
+      // Emit partial for UI display (could be shown differently)
+      _logger.d('Partial transcript: $text');
+    }
+  }
+
+  void _handleCommittedTranscript(Map<String, dynamic> data) {
+    final text = data['text'] ?? '';
+    print('📝 [STEP 4.2] COMMITTED TEXT: "$text"');
     
     if (text.toString().isNotEmpty) {
-      // Determine speaker based on index if available
-      String speakerLabel = speaker;
-      if (data['speaker_id'] != null) {
-        speakerLabel = data['speaker_id'] == 0 ? 'DOCTOR' : 'PATIENT';
-      }
+      _currentTranscript += '$text ';
+      _transcriptController?.add(_currentTranscript.trim());
       
-      _currentTranscript += '[$speakerLabel]: $text\n';
-      _transcriptController?.add(_currentTranscript);
+      print('📄 [STEP 4.4] Updated transcript (${_currentTranscript.length} chars)');
       
       final labelEntry = {
-        'speaker': speakerLabel,
+        'speaker': 'SPEAKER',
         'text': text.toString(),
       };
       _allSpeakerLabels.add(labelEntry);
       _speakerLabelsController?.add(List<Map<String, String>>.from(_allSpeakerLabels));
       
-      _logger.d('Transcript updated: $speakerLabel -> $text');
+      _logger.d('Committed transcript: $text');
     }
   }
 
-  void _handleFinalTranscript(Map<String, dynamic> data) {
-    final text = data['text'] ?? data['transcription'] ?? '';
+  void _handleCommittedTranscriptWithTimestamps(Map<String, dynamic> data) {
+    final text = data['text'] ?? '';
+    final words = data['words'] as List?;
+    
+    print('📝 [STEP 4.2] COMMITTED TEXT WITH TIMESTAMPS: "$text"');
+    if (words != null) {
+      print('   Words count: ${words.length}');
+    }
+    
     if (text.toString().isNotEmpty) {
-      _logger.i('Final transcript received: ${text.toString().length} chars');
+      _currentTranscript += '$text ';
+      _transcriptController?.add(_currentTranscript.trim());
+      
+      print('📄 [STEP 4.4] Updated transcript (${_currentTranscript.length} chars)');
+      
+      final labelEntry = {
+        'speaker': 'SPEAKER',
+        'text': text.toString(),
+      };
+      _allSpeakerLabels.add(labelEntry);
+      _speakerLabelsController?.add(List<Map<String, String>>.from(_allSpeakerLabels));
+      
+      _logger.d('Committed transcript with timestamps: $text');
     }
   }
 
   void _handleError(Map<String, dynamic> data) {
-    final error = data['message'] ?? data['error'] ?? 'Unknown error';
-    _logger.e('Scribe v2 error: $error');
-    _transcriptController?.addError(Exception(error));
+    final message = data['message'] ?? data['error'] ?? 'Unknown error';
+    final messageType = data['message_type'] ?? 'error';
+    print('❌ Scribe error ($messageType): $message');
+    _logger.e('Scribe error ($messageType): $message');
+    _transcriptController?.addError(Exception('$messageType: $message'));
   }
 
   /// Send audio chunk (PCM 16-bit, 16kHz)
+  /// Audio is sent as JSON with base64-encoded audio data
+  /// Docs: https://elevenlabs.io/docs/api-reference/speech-to-text/v-1-speech-to-text-realtime
   void sendAudioChunk(Uint8List audioData) {
     try {
       if (_channel != null && _isConnected) {
-        _channel!.sink.add(audioData);
+        // ElevenLabs Realtime API expects audio as base64 in JSON message
+        final audioBase64 = base64Encode(audioData);
+        final message = {
+          'message_type': 'input_audio_chunk',
+          'audio_base_64': audioBase64,
+        };
+        
+        print('🔊 [STEP 3.3] Sending audio chunk: ${audioData.length} bytes (base64: ${audioBase64.length} chars)');
+        _channel!.sink.add(jsonEncode(message));
       } else {
+        print('⚠️  WebSocket not connected! Cannot send audio.');
+        print('   _channel: ${_channel != null}, _isConnected: $_isConnected');
         _logger.w('WebSocket not connected, cannot send audio');
       }
     } catch (e) {
+      print('❌ Error sending audio: $e');
       _logger.e('Error sending audio: $e');
     }
   }
 
-  /// Send audio bytes as base64 (alternative method)
-  void sendAudioBase64(String base64Audio) {
-    try {
-      if (_channel != null && _isConnected) {
-        final message = jsonEncode({
-          'type': 'audio',
-          'audio': base64Audio,
-        });
-        _channel!.sink.add(message);
-      }
-    } catch (e) {
-      _logger.e('Error sending base64 audio: $e');
+  /// Manually commit the current transcript (if using manual commit strategy)
+  void commitTranscript() {
+    if (_channel != null && _isConnected) {
+      final message = {
+        'message_type': 'commit',
+      };
+      _channel!.sink.add(jsonEncode(message));
+      print('📤 Sent commit signal');
     }
   }
 
   /// Stop transcription and close connection
   Future<void> stopTranscription() async {
     try {
+      print('🛑 Stopping transcription...');
       // Send end-of-stream signal
       if (_channel != null && _isConnected) {
+        print('📤 Sending end-of-stream signal');
         _channel!.sink.add(jsonEncode({'type': 'end'}));
       }
       
@@ -207,8 +308,13 @@ class ScribeService {
       await _transcriptController?.close();
       await _speakerLabelsController?.close();
       _isConnected = false;
+      print('✅ Transcription stopped successfully');
+      print('📊 Final stats:');
+      print('   - Total transcript length: ${_currentTranscript.length} chars');
+      print('   - Speaker segments: ${_allSpeakerLabels.length}');
       _logger.i('Transcription stopped');
     } catch (e) {
+      print('❌ Error stopping transcription: $e');
       _logger.e('Error stopping transcription: $e');
     }
   }
