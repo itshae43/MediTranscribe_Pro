@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../config/theme.dart';
-import 'home_screen.dart';
+import 'main_screen.dart';
 
 /// Splash Screen
 /// Initial loading screen with branding and permission checks
@@ -28,7 +28,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     // Navigate to home screen
     if (mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const MainScreen()),
       );
     }
   }
