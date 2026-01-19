@@ -421,6 +421,9 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Future<void> _startNewRecording(BuildContext context, WidgetRef ref) async {
+    // Clear previous transcript state to ensure a fresh session
+    ref.read(transcriptStateProvider.notifier).clear();
+
     // Create new consultation
     final consultation = await ref.read(currentConsultationProvider.notifier).createNew(
       patientId: 'patient_${DateTime.now().millisecondsSinceEpoch}',
@@ -437,3 +440,4 @@ class HomeScreen extends ConsumerWidget {
     }
   }
 }
+

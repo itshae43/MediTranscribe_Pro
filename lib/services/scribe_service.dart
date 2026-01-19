@@ -14,9 +14,7 @@ class ScribeService {
   final String apiKey;
   final Logger _logger = Logger();
 
-  WebSocketChannel? _channel;
-  StreamController<String>? _transcriptController;
-  StreamController<List<Map<String, String>>>? _speakerLabelsController;
+  StreamController<String>? _partialTranscriptController;
   
   bool _isConnected = false;
   bool _isConnecting = false;
@@ -36,13 +34,14 @@ class ScribeService {
   List<Map<String, String>> get allSpeakerLabels => List.unmodifiable(_allSpeakerLabels);
 
   /// Start real-time transcription stream
-  /// Returns: Map with 'transcript' and 'speakerLabels' streams
+  /// Returns: Map with 'transcript', 'partialTranscript' and 'speakerLabels' streams
   /// NOTE: This is now async and must be awaited before sending audio
   Future<Map<String, Stream>> startTranscription({
     List<String> keyTerms = const [],
     String languageCode = 'en',
   }) async {
     _transcriptController = StreamController<String>.broadcast();
+    _partialTranscriptController = StreamController<String>.broadcast();
     _speakerLabelsController = StreamController<List<Map<String, String>>>.broadcast();
     _currentTranscript = '';
     _allSpeakerLabels.clear();
@@ -51,6 +50,7 @@ class ScribeService {
 
     return {
       'transcript': _transcriptController!.stream,
+      'partialTranscript': _partialTranscriptController!.stream,
       'speakerLabels': _speakerLabelsController!.stream,
     };
   }
@@ -197,7 +197,8 @@ class ScribeService {
     // Partial transcripts are temporary, don't add to final transcript yet
     // But we can show them in the UI as "typing indicator"
     if (text.toString().isNotEmpty) {
-      // Emit partial for UI display (could be shown differently)
+      // Emit partial for UI display
+      _partialTranscriptController?.add(text.toString());
       _logger.d('Partial transcript: $text');
     }
   }
@@ -306,6 +307,7 @@ class ScribeService {
       
       await _channel?.sink.close();
       await _transcriptController?.close();
+      await _partialTranscriptController?.close();
       await _speakerLabelsController?.close();
       _isConnected = false;
       print('✅ Transcription stopped successfully');

@@ -19,12 +19,14 @@ final transcriptStateProvider = StateNotifierProvider<TranscriptStateNotifier, T
 class TranscriptState {
   final bool isTranscribing;
   final String transcript;
+  final String partialTranscript;
   final List<SpeakerSegment> speakerSegments;
   final String? error;
 
   const TranscriptState({
     this.isTranscribing = false,
     this.transcript = '',
+    this.partialTranscript = '',
     this.speakerSegments = const [],
     this.error,
   });
@@ -32,12 +34,14 @@ class TranscriptState {
   TranscriptState copyWith({
     bool? isTranscribing,
     String? transcript,
+    String? partialTranscript,
     List<SpeakerSegment>? speakerSegments,
     String? error,
   }) {
     return TranscriptState(
       isTranscribing: isTranscribing ?? this.isTranscribing,
       transcript: transcript ?? this.transcript,
+      partialTranscript: partialTranscript ?? this.partialTranscript,
       speakerSegments: speakerSegments ?? this.speakerSegments,
       error: error,
     );
@@ -102,17 +106,32 @@ class TranscriptStateNotifier extends StateNotifier<TranscriptState> {
     state = state.copyWith(
       isTranscribing: true,
       transcript: '',
+      partialTranscript: '',
       speakerSegments: [],
       error: null,
     );
 
-    // Listen to transcript stream
+    // Listen to transcript stream (committed)
     _streams?['transcript']?.listen(
       (transcript) {
-        state = state.copyWith(transcript: transcript);
+        state = state.copyWith(
+          transcript: transcript,
+          partialTranscript: '', // Clear partial when committed
+        );
       },
       onError: (error) {
         state = state.copyWith(error: error.toString());
+      },
+    );
+
+    // Listen to partial transcript stream
+    _streams?['partialTranscript']?.listen(
+      (partial) {
+        state = state.copyWith(partialTranscript: partial);
+      },
+      onError: (error) {
+        // Log error but don't stop flow
+        print('Partial transcript error: $error');
       },
     );
 

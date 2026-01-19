@@ -25,101 +25,70 @@ class RecordingScreen extends ConsumerStatefulWidget {
   ConsumerState<RecordingScreen> createState() => _RecordingScreenState();
 }
 
-class _RecordingScreenState extends ConsumerState<RecordingScreen> {
-
+class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerProviderStateMixin {
+  final ScrollController _scrollController = ScrollController();
+  late AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat(reverse: true);
+
+    // Auto-start recording when screen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startRecording();
+    });
   }
 
   Future<void> _startRecording() async {
     final recordingNotifier = ref.read(recordingStateProvider.notifier);
     final transcriptNotifier = ref.read(transcriptStateProvider.notifier);
     final scribeService = ref.read(scribeServiceProvider);
-    
+
     try {
-      // Start transcription service and WAIT for WebSocket connection
-      print('🎤 Starting transcription service...');
       await transcriptNotifier.startTranscription(
         keyTerms: ['hypertension', 'diabetes', 'medication', 'treatment'],
       );
-      print('✅ Transcription service connected');
       
-      // Now start audio recording with callback to send to Scribe
       final success = await recordingNotifier.startRecording(
         onAudioChunk: (bytes) {
           scribeService.sendAudioChunk(bytes);
         },
       );
-      
+
       if (!success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to start recording. Please check microphone permission.'),
-            backgroundColor: Colors.red,
-          ),
+          const SnackBar(content: Text('Failed to start recording')),
         );
       }
     } catch (e) {
-      print('❌ Error starting recording: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to connect to transcription service: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      print('Error starting recording: $e');
     }
   }
 
   Future<void> _stopRecording() async {
     final recordingNotifier = ref.read(recordingStateProvider.notifier);
     final transcriptNotifier = ref.read(transcriptStateProvider.notifier);
-    
+
     await recordingNotifier.stopRecording();
     await transcriptNotifier.stopTranscription();
   }
 
   Future<void> _finalizeConsultation() async {
+    await _stopRecording();
+    
+    if (!mounted) return;
+
     final transcriptState = ref.read(transcriptStateProvider);
     final consultationNotifier = ref.read(currentConsultationProvider.notifier);
-    
-    // Update consultation with transcript
+
     consultationNotifier.updateTranscript(transcriptState.transcript);
-    
-    // Show loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Generating clinical notes...'),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    
-    // Simulate note generation (in real app, call backend)
-    await Future.delayed(const Duration(seconds: 2));
-    
-    // Finalize
     await consultationNotifier.finalize();
-    
+
     if (mounted) {
-      Navigator.pop(context); // Close loading dialog
-      
-      // Navigate to notes screen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -130,418 +99,388 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
   }
 
   @override
+  void dispose() {
+    _pulseController.dispose();
+    _stopRecording();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final recordingState = ref.watch(recordingStateProvider);
     final transcriptState = ref.watch(transcriptStateProvider);
 
+    // Auto-scroll to bottom when new content arrives
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('🏥 Recording Session'),
+        backgroundColor: const Color(0xFF2E3E8C),
+        elevation: 0,
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.2),
+            ),
+            child: const Icon(Icons.arrow_back_ios_new, size: 16, color: Colors.white),
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Live Consultation',
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+        ),
         centerTitle: true,
-        backgroundColor: recordingState.isRecording 
-            ? AppTheme.recordingActive 
-            : AppTheme.primaryColor,
         actions: [
-          if (recordingState.isRecording)
-            Container(
-              margin: const EdgeInsets.only(right: 16),
-              child: const Row(
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: () {},
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Timer Section
+          Container(
+            width: double.infinity,
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              children: [
+                // Recording Status Chip
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF0F0),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FadeTransition(
+                        opacity: _pulseController,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'RECORDING...',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Big Timer
+                Text(
+                  recordingState.formattedDuration,
+                  style: const TextStyle(
+                    fontSize: 56,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1F36),
+                    fontFamily: 'Monospace',
+                    letterSpacing: -1,
+                  ),
+                ),
+                
+                // Visualizer
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 48,
+                  child: _buildWaveform(recordingState.amplitude),
+                ),
+              ],
+            ),
+          ),
+
+          // Transcript Area
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+              ),
+              child: Column(
                 children: [
-                  Icon(Icons.fiber_manual_record, color: Colors.white, size: 12),
-                  SizedBox(width: 4),
-                  Text('LIVE', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 20),
+                  // Date Chip
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      'STARTED ${TimeOfDay.now().format(context)}',
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                  
+                  // List
+                  Expanded(
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(24),
+                      itemCount: transcriptState.speakerSegments.length + (transcriptState.partialTranscript.isNotEmpty ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        // Handle partial transcript item (last item)
+                        if (index == transcriptState.speakerSegments.length) {
+                          return _buildTranscriptItem(
+                            speaker: 'LISTENING',
+                            text: transcriptState.partialTranscript,
+                            isPartial: true,
+                          );
+                        }
+
+                        // Handle finalized segments
+                        final segment = transcriptState.speakerSegments[index];
+                        return _buildTranscriptItem(
+                          speaker: segment.speaker,
+                          text: segment.text,
+                          timestamp: _formatTimestamp(segment.timestamp),
+                        );
+                      },
+                    ),
+                  ),
                 ],
               ),
             ),
+          ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Recording Section
-            _buildRecordingSection(recordingState)
-                .animate()
-                .fadeIn(duration: 400.ms),
-            
-            // Live Transcript Section
-            _buildTranscriptSection(transcriptState)
-                .animate()
-                .fadeIn(delay: 200.ms, duration: 400.ms),
-            
-            // Compliance Section
-            _buildComplianceSection()
-                .animate()
-                .fadeIn(delay: 400.ms, duration: 400.ms),
-            
-            // Action Buttons
-            _buildActionButtons(recordingState, transcriptState)
-                .animate()
-                .fadeIn(delay: 600.ms, duration: 400.ms),
-          ],
+      bottomSheet: Container(
+        color: const Color(0xFFF8FAFC), // Match background of transcript
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 20,
+                offset: Offset(0, -5),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Security Badge
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.lock, size: 12, color: Color(0xFF00C853)),
+                    const SizedBox(width: 6),
+                    Text(
+                      'HIPAA Secure & Encrypted 256-bit',
+                      style: TextStyle(
+                        color: const Color(0xFF00C853).withOpacity(0.8),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                
+                // Controls
+                Row(
+                  children: [
+                    // Pause Button
+                    InkWell(
+                      onTap: recordingState.isPaused
+                          ? ref.read(recordingStateProvider.notifier).resumeRecording
+                          : ref.read(recordingStateProvider.notifier).pauseRecording,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(
+                          recordingState.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                          color: const Color(0xFF2E3E8C),
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    
+                    // Stop Button
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _finalizeConsultation,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF6B00),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.stop, color: Color(0xFFFF6B00), size: 16),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'STOP RECORDING',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildRecordingSection(RecordingState recordingState) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: recordingState.isRecording
-              ? [AppTheme.recordingActive, AppTheme.recordingActive.withOpacity(0.8)]
-              : [AppTheme.primaryColor, AppTheme.primaryColorDark],
-        ),
-      ),
+  Widget _buildTranscriptItem({
+    required String speaker,
+    required String text,
+    String? timestamp,
+    bool isPartial = false,
+  }) {
+    final isDoctor = speaker.toUpperCase() == 'DOCTOR';
+    final speakerColor = isDoctor ? const Color(0xFF2E3E8C) : (isPartial ? Colors.grey : const Color(0xFF64748B));
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Timer Display
-          Text(
-            recordingState.formattedDuration,
-            style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 64,
-                ),
-          ),
-          
-          const SizedBox(height: 8),
-          
-          // Status Text
-          Text(
-            recordingState.isRecording 
-                ? (recordingState.isPaused ? 'Paused' : 'Recording...')
-                : 'Ready to Record',
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-            ),
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Audio Visualizer (simplified)
-          if (recordingState.isRecording)
-            _buildAudioVisualizer(recordingState.amplitude),
-          
-          const SizedBox(height: 24),
-          
-          // Record/Stop Buttons
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Record/Stop Button
-              GestureDetector(
-                onTap: recordingState.isRecording ? _stopRecording : _startRecording,
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    recordingState.isRecording ? Icons.stop : Icons.mic,
-                    size: 40,
-                    color: recordingState.isRecording 
-                        ? AppTheme.recordingActive 
-                        : AppTheme.primaryColor,
-                  ),
+              Text(
+                '[${speaker.toUpperCase()}]',
+                style: TextStyle(
+                  color: speakerColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
                 ),
               ),
-              
-              if (recordingState.isRecording) ...[
-                const SizedBox(width: 24),
-                // Pause/Resume Button
-                GestureDetector(
-                  onTap: recordingState.isPaused
-                      ? ref.read(recordingStateProvider.notifier).resumeRecording
-                      : ref.read(recordingStateProvider.notifier).pauseRecording,
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: Icon(
-                      recordingState.isPaused ? Icons.play_arrow : Icons.pause,
-                      size: 28,
-                      color: Colors.white,
-                    ),
+              if (timestamp != null) ...[
+                const SizedBox(width: 8),
+                Text(
+                  timestamp,
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 12,
                   ),
                 ),
               ],
             ],
           ),
-          
-          const SizedBox(height: 16),
-          
+          const SizedBox(height: 8),
           Text(
-            recordingState.isRecording ? 'Tap to stop' : 'Tap to start recording',
-            style: const TextStyle(color: Colors.white70),
+            text,
+            style: TextStyle(
+              color: isPartial ? Colors.grey[500] : const Color(0xFF334155),
+              fontSize: 16,
+              height: 1.5,
+              fontStyle: isPartial ? FontStyle.italic : FontStyle.normal,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAudioVisualizer(double amplitude) {
+  Widget _buildWaveform(double amplitude) {
     // Normalize amplitude to 0-1 range
     final normalizedAmp = ((amplitude + 60) / 60).clamp(0.0, 1.0);
     
-    return SizedBox(
-      height: 40,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(20, (index) {
-          final height = 10 + (normalizedAmp * 30 * ((index % 3) + 1) / 3);
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            width: 4,
-            height: height,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          )
-              .animate(onPlay: (c) => c.repeat())
-              .scaleY(
-                begin: 0.5,
-                end: 1.0,
-                duration: Duration(milliseconds: 300 + (index * 50)),
-              )
-              .then()
-              .scaleY(begin: 1.0, end: 0.5);
-        }),
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: List.generate(24, (index) {
+        // Create a symmetric wave effect from center
+        final distanceFromCenter = (index - 11.5).abs();
+        final baseHeight = 12.0;
+        final variableHeight = 36.0 * normalizedAmp * (1 - (distanceFromCenter / 12));
+        final height = (baseHeight + variableHeight).clamp(8.0, 48.0);
+        
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 100),
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          width: 4,
+          height: height,
+          decoration: BoxDecoration(
+            color: const Color(0xFF00C853).withOpacity(0.8),
+            borderRadius: BorderRadius.circular(4),
+          ),
+        );
+      }),
     );
   }
 
-  Widget _buildTranscriptSection(TranscriptState transcriptState) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '📝 Live Transcript',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                '${transcriptState.wordCount} words',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            constraints: const BoxConstraints(minHeight: 200, maxHeight: 400),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: SingleChildScrollView(
-              child: transcriptState.speakerSegments.isEmpty
-                  ? Text(
-                      transcriptState.transcript.isEmpty
-                          ? 'Transcript will appear here as you speak...'
-                          : transcriptState.transcript,
-                      style: TextStyle(
-                        fontSize: 15,
-                        height: 1.6,
-                        color: transcriptState.transcript.isEmpty
-                            ? Colors.grey
-                            : Colors.black87,
-                      ),
-                    )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: transcriptState.speakerSegments.map((segment) {
-                        final isDoctor = segment.speaker == 'DOCTOR';
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isDoctor
-                                      ? Colors.blue.shade100
-                                      : Colors.green.shade100,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  isDoctor ? 'Dr.' : 'Patient',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDoctor
-                                        ? Colors.blue.shade800
-                                        : Colors.green.shade800,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  segment.text,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildComplianceSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '🔒 Compliance & Security',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            elevation: 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: AppConstants.complianceFeatures.map((feature) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.check_circle,
-                          color: Colors.green,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            feature,
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons(
-    RecordingState recordingState,
-    TranscriptState transcriptState,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Finalize Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: recordingState.isRecording || transcriptState.transcript.isEmpty
-                  ? null
-                  : _finalizeConsultation,
-              icon: const Icon(Icons.check),
-              label: const Text('✅ Finalize & Generate Notes'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.successColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 12),
-          
-          // Cancel Button
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                if (recordingState.isRecording) {
-                  _stopRecording();
-                }
-                Navigator.pop(context);
-              },
-              icon: const Icon(Icons.close),
-              label: const Text('Cancel'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    // Stop transcription when leaving the screen
-    ref.read(transcriptStateProvider.notifier).stopTranscription();
-    super.dispose();
+  String _formatTimestamp(DateTime timestamp) {
+    return '${timestamp.minute.toString().padLeft(2, '0')}:${timestamp.second.toString().padLeft(2, '0')}';
   }
 }
+
