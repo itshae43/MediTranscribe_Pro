@@ -1,0 +1,91 @@
+name: meditranscribe
+description: HIPAA-compliant medical transcription using ElevenLabs Scribe v2.
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # STATE MANAGEMENT
+  riverpod: ^2.4.0
+  flutter_riverpod: ^2.4.0
+
+  # HTTP & API
+  http: ^1.1.0
+  dio: ^5.3.0
+  web_socket_channel: ^2.4.0
+
+  # AUDIO RECORDING
+  record: ^6.0.0
+  audio_waveforms: ^1.0.3
+
+  # DATABASE & LOCAL STORAGE
+  sqflite: ^2.3.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # ENCRYPTION & SECURITY
+  encrypt: ^5.0.1
+  cryptography: ^2.0.5
+
+  # JSON SERIALIZATION
+  json_annotation: ^4.8.1
+
+  # DATE & TIME
+  intl: ^0.19.0
+
+  # UI & ANIMATIONS
+  flutter_animate: ^4.2.0
+  lottie: ^2.6.0
+  shimmer: ^3.0.0
+
+  # NAVIGATION
+  go_router: ^12.1.0
+
+  # NOTIFICATIONS
+  flutter_local_notifications: ^18.0.0
+
+  # LOCAL DATA
+  shared_preferences: ^2.2.2
+
+  # PERMISSIONS
+  permission_handler: ^11.0.0
+
+  # PDF EXPORT
+  pdf: ^3.10.5
+  printing: ^5.12.0
+
+  # LOGGING
+  logger: ^2.0.2
+
+  # CONNECTIVITY
+  connectivity_plus: ^5.0.0
+
+  # UUID
+  uuid: ^4.2.1
+
+  # Flutter dotenv
+  flutter_dotenv: ^5.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^3.0.0
+  build_runner: ^2.4.6
+  json_serializable: ^6.7.1
+  hive_generator: ^2.0.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/lottie/
+    - .env
