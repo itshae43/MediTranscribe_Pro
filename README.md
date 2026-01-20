@@ -1,6 +1,6 @@
 # MediTranscribe Pro
 
-> **MediTranscribe Pro—a HIPAA-compliant mobile app for doctors that slashes documentation time from hours to minutes using @elevenlabs Scribe v2! Real-time medical transcription, speaker diarization (Doctor vs. Patient), auto-generated notes, offline mode, and 99.2% accuracy on med terms.**
+> **MediTranscribe Pro—mobile app for doctors that slashes documentation time from hours to minutes using @elevenlabs Scribe v2! Real-time medical transcription, speaker diarization (Doctor vs. Patient), auto-generated notes, offline mode, and 99.2% accuracy on med terms.**
 
 ![MediTranscribe Pro Banner](assets/images/app_icon.png)
 
@@ -27,21 +27,6 @@ MediTranscribe Pro is a mobile-first application designed to automate the entire
 *   **Backend Integration:** Python Flask (API Gateway)
 *   **Encryption:** AES-256 (encrypt package)
 
-## 📸 Screenshots
-
-| Home Screen | Recording & Diarization | Generated Notes |
-|:---:|:---:|:---:|
-| *Dashboard with Waiting Queue* | *Real-time Doctor/Patient Transcription* | *Auto-generated Clinical Summary* |
-
-## 🏗️ Architecture
-
-```mermaid
-graph TD
-    A[Mobile App (Flutter)] -->|WebSocket Audio Stream| B(ElevenLabs Scribe v2 API)
-    B -->|Real-time Transcript + Diarization| A
-    A -->|Finalized Transcript| C{Local SQLite DB}
-    C -->|Sync| D[Secure Backend / Cloud]
-```
 
 ## 🚀 Getting Started
 
