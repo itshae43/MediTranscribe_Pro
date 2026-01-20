@@ -24,16 +24,11 @@ class NotesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // In a real app we would use conversationId to fetch data
-    // For now we use the active consultation from provider or fallbacks
-    final consultation = ref.watch(currentConsultationProvider);
-    
-    // Mock Data for the design
-    // The design shows specific content, so we'll hardcode some defaults 
-    // but try to use dynamic data where possible
+    // Fetch the consultation by ID from the list
+    final consultationsAsync = ref.watch(consultationsListProvider);
     
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor, // Light background
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black87, size: 20),
@@ -52,7 +47,7 @@ class NotesScreen extends ConsumerWidget {
         centerTitle: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.share_outlined, color: AppTheme.secondaryColor), // Brand Blue
+            icon: const Icon(Icons.share_outlined, color: AppTheme.secondaryColor),
             onPressed: () {},
           ),
         ],
@@ -61,13 +56,20 @@ class NotesScreen extends ConsumerWidget {
           child: Container(color: Colors.grey.shade200, height: 1),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. Doctor Profile Header
-            _buildDoctorHeader(consultation),
+      body: consultationsAsync.when(
+        data: (consultations) {
+          final consultation = consultations.firstWhere(
+            (c) => c.id == consultationId,
+            orElse: () => consultations.first,
+          );
+          
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Doctor Profile Header
+                _buildDoctorHeader(consultation),
             
             const SizedBox(height: 24),
             
@@ -140,7 +142,7 @@ class NotesScreen extends ConsumerWidget {
             const SizedBox(height: 24),
 
             // 6. Full Transcript Collapsible
-            _buildTranscriptCollapse(),
+            _buildTranscriptCollapse(consultation),
 
             const SizedBox(height: 24),
 
@@ -149,15 +151,19 @@ class NotesScreen extends ConsumerWidget {
             
             const SizedBox(height: 24),
           ],
-        ),
+            ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => const Center(child: Text('Error loading consultation')),
       ),
     );
   }
 
   Widget _buildDoctorHeader(dynamic consultation) {
-    // Dates/Times
-    final now = DateTime.now();
-    final dateStr = DateFormat('MMM dd, yyyy').format(now);
+    final dateStr = DateFormat('MMM dd, yyyy').format(consultation?.createdAt ?? DateTime.now());
+    final duration = consultation?.formattedDuration ?? '0m 0s';
+    final patientName = consultation?.patientId ?? 'Unknown Patient';
     
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,9 +171,17 @@ class NotesScreen extends ConsumerWidget {
         // Avatar with verified badge
         Stack(
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 24,
-              backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=a042581f4e29026702d'), // Male doctor avatar
+              backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+              child: Text(
+                patientName.substring(0, 1).toUpperCase(),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
             ),
             Positioned(
               right: -2,
@@ -175,7 +189,7 @@ class NotesScreen extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.all(2),
                 decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                child: const Icon(Icons.check_circle, size: 16, color: Colors.green),
+                child: const Icon(Icons.check_circle, size: 16, color: AppTheme.successColor),
               ),
             ),
           ],
@@ -186,15 +200,13 @@ class NotesScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-               const Row(
+               Row(
                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                  children: [
                     Text(
-                      'John Doe*', 
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+                      patientName,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
                     ),
-                    // Finalized badge
-                    // We can use a Container instead of built-in Chip to match design perfectly
                  ],
                ),
                const SizedBox(height: 4),
@@ -207,7 +219,7 @@ class NotesScreen extends ConsumerWidget {
                    ),
                    Icon(Icons.access_time_filled, size: 14, color: Colors.grey.shade600),
                    const SizedBox(width: 4),
-                   Text('2m 14s', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                   Text(duration, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
                  ],
                ),
             ],
@@ -349,7 +361,10 @@ class NotesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTranscriptCollapse() {
+  Widget _buildTranscriptCollapse(dynamic consultation) {
+    final transcript = consultation?.transcript;
+    final hasTranscript = transcript != null && transcript.isNotEmpty;
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -366,13 +381,21 @@ class NotesScreen extends ConsumerWidget {
            child: const Icon(Icons.description, color: Colors.grey, size: 20),
          ),
          title: const Text('Full Transcript', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-         subtitle: Text('View source audio text', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
-         children: const [
+         subtitle: Text(
+           hasTranscript ? 'View source audio text' : 'No transcript available',
+           style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+         ),
+         children: [
             Padding(
-              padding: EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16.0),
               child: Text(
-                'Doctor: How are you feeling today?\nPatient: I have had a dry cough for 3 weeks...\n(Transcript text goes here)',
-                style: TextStyle(color: Colors.grey),
+                hasTranscript 
+                  ? transcript 
+                  : 'No transcript was recorded for this consultation. The audio recording may not have been processed yet, or transcription was not enabled.',
+                style: TextStyle(
+                  color: hasTranscript ? Colors.black87 : Colors.grey.shade500,
+                  height: 1.5,
+                ),
               ),
             ),
          ],
