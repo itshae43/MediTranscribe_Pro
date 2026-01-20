@@ -5,7 +5,7 @@ import '../config/theme.dart';
 import 'home_screen.dart';
 import 'archive_screen.dart';
 import 'settings_screen.dart';
-import 'compliance_screen.dart';
+import 'alerts_screen.dart';
 
 /// Main Screen with Custom Bottom Navigation Bar
 class MainScreen extends ConsumerStatefulWidget {
@@ -21,7 +21,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   final List<Widget> _screens = [
     const HomeScreen(),
     const ArchiveScreen(),
-    const ComplianceScreen(), // Security Hub
+    const AlertsScreen(), // Alerts Hub
     const SettingsScreen(),   // Profile Settings
   ];
 
@@ -52,7 +52,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               children: [
                 _buildNavItem(0, 'Dashboard', Icons.grid_view_rounded, Icons.grid_view_outlined),
                 _buildNavItem(1, 'Archive', Icons.folder_open_rounded, Icons.folder_open_outlined),
-                _buildNavItem(2, 'Security', Icons.shield_rounded, Icons.shield_outlined),
+                _buildNavItem(2, 'Alerts', Icons.notifications_rounded, Icons.notifications_none_rounded),
                 _buildNavItem(3, 'Profile', Icons.person_rounded, Icons.person_outline_rounded),
               ],
             ),
