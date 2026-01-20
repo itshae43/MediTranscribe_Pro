@@ -183,18 +183,12 @@ class HomeScreen extends ConsumerWidget {
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
                     ),
-                    child: CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.white,
-                      child: Text(
-                        'SM',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppTheme.primaryColor,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: const CircleAvatar(
+                        radius: 28,
+                        backgroundColor: Colors.white,
+                        backgroundImage: AssetImage('assets/images/doctor_profile.png'),
                       ),
                     ),
-                  ),
                   Positioned(
                     right: 2,
                     bottom: 2,
@@ -347,7 +341,7 @@ class HomeScreen extends ConsumerWidget {
             }
             
             return SizedBox(
-              height: 140, // Height for horizontal cards
+              height: 170, // Increased height for horizontal cards to prevent overflow
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: waiting.length,

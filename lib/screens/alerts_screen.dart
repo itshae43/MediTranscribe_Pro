@@ -47,7 +47,7 @@ class AlertsScreen extends ConsumerWidget {
           _buildAlertCard(
             context: context,
             title: 'Abnormal Lab Results',
-            description: 'Patient #8492 (Sarah J.) showed elevated potassium levels. Immediate follow-up recommended.',
+            description: 'Patient (Sarah J.) showed elevated potassium levels. Immediate follow-up recommended.',
             timestamp: DateTime.now().subtract(const Duration(minutes: 45)),
             type: AlertType.critical,
             isRead: false,
@@ -73,7 +73,7 @@ class AlertsScreen extends ConsumerWidget {
           _buildAlertCard(
             context: context,
             title: 'Transcription Completed',
-            description: 'Consultation with Patient #9921 has been successfully localized and saved.',
+            description: 'Consultation has been successfully localized and saved.',
             timestamp: DateTime.now().subtract(const Duration(hours: 5)),
             type: AlertType.success,
             isRead: true,
