@@ -803,7 +803,7 @@ class HomeScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
               SizedBox(
-                width: 80,
+                width: 100, // Increased width for longer labels like "Scheduled"
                 child: Text('$label:', style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54)),
               ),
               Expanded(
