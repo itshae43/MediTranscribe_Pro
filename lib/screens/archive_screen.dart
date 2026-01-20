@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../config/theme.dart';
 import '../providers/consultation_provider.dart';
 import '../models/consultation.dart';
+import 'notes_screen.dart';
 
 /// Archive Screen
 /// Displays past consultations with a specific design:
@@ -333,95 +334,111 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     final statusBgColor = isFinalized ? AppTheme.successColor.withOpacity(0.1) : Colors.orange.withOpacity(0.1); 
     final statusIconColor = isFinalized ? AppTheme.successColor : Colors.orange;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: AppTheme.shadowElevation1,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left: Time
-          Column(
-            children: [
-              Text(
-                timeStr,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.black87,
-                ),
-              ),
-              Text(
-                amPm,
-                style: TextStyle(
-                  color: Colors.grey.shade500,
-                  fontSize: 12,
-                ),
-              ),
-            ],
+    return InkWell(
+      onTap: () {
+        // Navigate to Notes Screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => NotesScreen(consultationId: c.id),
           ),
-          const SizedBox(width: 16),
-          
-          // Middle: Details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade100),
+          boxShadow: AppTheme.shadowElevation1,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left: Time
+            Column(
               children: [
                 Text(
-                    c.patientId, // Display Patient Name from ID field (as per mocks)
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16, 
-                        color: Colors.black87,
-                    ),
-                ),
-                const SizedBox(height: 4),
-                RichText(
-                  text: TextSpan(
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13, height: 1.4),
-                    children: [
-                        // Generate a pseudo-ID if patientId is a name
-                        TextSpan(text: 'ID: #${c.id.substring(0,6).toUpperCase()} • ', style: const TextStyle(fontWeight: FontWeight.w600)),
-                        TextSpan(text: _getSnippet(c)),
-                    ],
+                  timeStr,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black87,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  amPm,
+                  style: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 8),
+            const SizedBox(width: 16),
+            
+            // Middle: Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                      c.patientId, // Display Patient Name from ID field (as per mocks)
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16, 
+                          color: Colors.black87,
+                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  RichText(
+                    text: TextSpan(
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13, height: 1.4),
+                      children: [
+                          // Generate a pseudo-ID if patientId is a name
+                          TextSpan(text: 'ID: #${c.id.substring(0,6).toUpperCase()} • ', style: const TextStyle(fontWeight: FontWeight.w600)),
+                          TextSpan(text: _getSnippet(c)),
+                      ],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
 
-          // Right: Status + Lock
-          Column(
-              children: [
-                   Container(
-                     padding: const EdgeInsets.all(8),
-                     decoration: BoxDecoration(
-                         color: statusBgColor,
-                         shape: BoxShape.circle,
+            // Right: Status + Lock
+            Column(
+                children: [
+                     Container(
+                       padding: const EdgeInsets.all(8),
+                       decoration: BoxDecoration(
+                           color: statusBgColor,
+                           shape: BoxShape.circle,
+                       ),
+                       child: Icon(statusIcon, color: statusIconColor, size: 20),
                      ),
-                     child: Icon(statusIcon, color: statusIconColor, size: 20),
-                   ),
-                   const SizedBox(height: 8),
-                   Icon(Icons.lock, color: Colors.grey.shade300, size: 16),
-              ],
-          ),
-        ],
+                     const SizedBox(height: 8),
+                     Icon(Icons.lock, color: Colors.grey.shade300, size: 16),
+                ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   String _getSnippet(Consultation c) {
+      // Prioritize chief complaint over transcript
+      if (c.chiefComplaint != null && c.chiefComplaint!.isNotEmpty) {
+          return c.chiefComplaint!;
+      }
       if (c.transcript != null && c.transcript!.isNotEmpty) {
           return c.transcript!;
       }
-      return 'No transcript available for this consultation...';
+      return 'No details available for this consultation...';
   }
 }
