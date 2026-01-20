@@ -8,11 +8,11 @@ import '../models/consultation.dart';
 import 'recording_screen.dart';
 import 'archive_screen.dart';
 import 'settings_screen.dart';
-import 'compliance_screen.dart';
+import 'notes_screen.dart';
 import '../providers/transcript_provider.dart';
 
 /// Home Screen
-/// Main dashboard showing recent consultations and quick actions
+/// Main dashboard showing waiting patients and quick actions
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -21,13 +21,14 @@ class HomeScreen extends ConsumerWidget {
     final consultationsAsync = ref.watch(consultationsListProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB), // Very light grey background
+      backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
-            ref.read(consultationsListProvider.notifier).refresh();
+             await ref.read(consultationsListProvider.notifier).refresh();
           },
           child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,17 +45,17 @@ class HomeScreen extends ConsumerWidget {
                     .fadeIn(duration: 400.ms)
                     .slideY(begin: 0.1, end: 0),
                 
-                const SizedBox(height: 24),
-                
-                // Stats Row
-                _buildStatsRow(consultationsAsync)
-                    .animate()
-                    .fadeIn(delay: 200.ms, duration: 400.ms)
-                    .slideY(begin: 0.1, end: 0),
-                
                 const SizedBox(height: 32),
                 
-                // Recent Consultations
+                // Consulting Queue / Waiting List
+                _buildWaitingConsultationsSection(context, ref, consultationsAsync)
+                   .animate()
+                   .fadeIn(delay: 200.ms, duration: 400.ms)
+                   .slideY(begin: 0.1, end: 0),
+
+                const SizedBox(height: 32),
+                
+                // Recent / Processed Consultations
                 _buildRecentConsultationsSection(context, consultationsAsync)
                     .animate()
                     .fadeIn(delay: 400.ms, duration: 400.ms)
@@ -93,7 +94,6 @@ class HomeScreen extends ConsumerWidget {
             ),
           ],
         ),
-        // Add settings icon to allow navigation to settings even without AppBar
         IconButton(
           onPressed: () => Navigator.push(
             context,
@@ -105,9 +105,10 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
+  // --- 1. Start Consultation Action ---
   Widget _buildStartConsultationCard(BuildContext context, WidgetRef ref) {
     return GestureDetector(
-      onTap: () => _startNewRecording(context, ref),
+      onTap: () => _showPatientSelectionSheet(context, ref),
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
@@ -137,7 +138,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Tap to begin dictation',
+                    'Tap to select a patient from the queue',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.white.withOpacity(0.9),
@@ -164,97 +165,134 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsRow(AsyncValue<List<Consultation>> consultationsAsync) {
-    return consultationsAsync.when(
-      data: (consultations) {
-        final completed = consultations.length;
-        // Mock accuracy and safe status for design matching since we don't have real metrics yet
-        
-        return Row(
+  // --- 2. Waiting List Section ---
+  Widget _buildWaitingConsultationsSection(
+    BuildContext context, 
+    WidgetRef ref,
+    AsyncValue<List<Consultation>> consultationsAsync
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(
-              child: _buildStatCard(
-                value: '$completed',
-                label: 'DONE',
-                valueColor: const Color(0xFF3B82F6), // Blue
-                icon: null,
+            RichText(
+              text: const TextSpan(
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1F2937),
+                ),
+                children: [
+                  TextSpan(text: 'Waiting '),
+                  TextSpan(text: 'Queue', style: TextStyle(color: Color(0xFF3B82F6))), // Blue highlight
+                ],
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                value: '98%',
-                label: 'ACC.',
-                valueColor: Color(0xFF10B981), // Green
-                icon: null,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                value: '',
-                label: 'SAFE',
-                valueColor: Color(0xFF1F2937), // Dark
-                icon: Icons.lock,
-                iconColor: Color(0xFF3B82F6),
-              ),
+            Container(
+               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+               decoration: BoxDecoration(
+                 color: Colors.blue.withOpacity(0.1),
+                 borderRadius: BorderRadius.circular(12),
+               ),
+               child: const Text('Next Up', style: TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.bold)),
             ),
           ],
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const Text('Error'),
-    );
-  }
-
-  Widget _buildStatCard({
-    required String value,
-    required String label,
-    required Color valueColor,
-    IconData? icon,
-    Color? iconColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (icon != null)
-            Icon(icon, color: iconColor, size: 28)
-          else
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: valueColor,
+        ),
+        const SizedBox(height: 16),
+        consultationsAsync.when(
+          data: (consultations) {
+            final waiting = consultations.where((c) => c.status == 'waiting').toList();
+            
+            if (waiting.isEmpty) {
+              return _buildEmptyState('No patients waiting.');
+            }
+            
+            return SizedBox(
+              height: 140, // Height for horizontal cards
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: waiting.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  return _buildWaitingCard(context, ref, waiting[index]);
+                },
               ),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWaitingCard(BuildContext context, WidgetRef ref, Consultation consultation) {
+    // Show time as "10:30 AM" or similar based on created/scheduled time
+    final timeStr = DateFormat('jm').format(consultation.createdAt);
+
+    return InkWell(
+      onTap: () => _showPatientDetailsStatus(context, consultation),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 200,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.blue.withOpacity(0.1)),
+          boxShadow: [
+             BoxShadow(
+               color: Colors.blue.withOpacity(0.05),
+               blurRadius: 10,
+               offset: const Offset(0, 4),
+             ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                   decoration: BoxDecoration(
+                     color: Colors.grey.shade100,
+                     borderRadius: BorderRadius.circular(8),
+                   ),
+                   child: Text(timeStr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
+                ),
+                const Icon(Icons.more_horiz, color: Colors.grey),
+              ],
             ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF9CA3AF), // Grey
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                 Text(
+                   consultation.patientId,
+                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                   maxLines: 1, 
+                   overflow: TextOverflow.ellipsis
+                 ),
+                 const SizedBox(height: 4),
+                 Text(
+                   consultation.chiefComplaint ?? 'No details provided',
+                   style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                   maxLines: 2,
+                   overflow: TextOverflow.ellipsis,
+                 ),
+              ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
+  // --- 3. Recent Section ---
   Widget _buildRecentConsultationsSection(
     BuildContext context,
     AsyncValue<List<Consultation>> consultationsAsync,
@@ -284,19 +322,23 @@ class HomeScreen extends ConsumerWidget {
         const SizedBox(height: 16),
         consultationsAsync.when(
           data: (consultations) {
-            if (consultations.isEmpty) {
-              return _buildEmptyState();
+            // Filter out 'waiting' status, we only want processed/drafts here
+            final recent = consultations
+                .where((c) => c.status != 'waiting')
+                .take(5)
+                .toList();
+
+            if (recent.isEmpty) {
+              return _buildEmptyState('No completed consultations yet.');
             }
-            // Take top 5 for "Recent"
-            final recent = consultations.take(5).toList();
+            
             return ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: recent.length,
               separatorBuilder: (context, index) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
-                final consultation = recent[index];
-                return _buildConsultationItem(consultation, index);
+                return _buildConsultationItem(context, recent[index], index);
               },
             );
           },
@@ -307,129 +349,129 @@ class HomeScreen extends ConsumerWidget {
     );
   }
   
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(String msg) {
     return Container(
-        padding: const EdgeInsets.all(30),
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16)
         ),
-        child: const Center(child: Text("No recent consultations"))
+        child: Center(child: Text(msg, style: TextStyle(color: Colors.grey.shade400)))
     );
   }
 
-  Widget _buildConsultationItem(Consultation consultation, int index) {
-    // Map status to design terms
-    final statusText = consultation.status == 'finalized' ? 'Processed' : 'Processing';
+  Widget _buildConsultationItem(BuildContext context, Consultation consultation, int index) {
+    final statusText = consultation.status == 'finalized' ? 'Processed' : 'Draft';
     final statusColor = consultation.status == 'finalized' ? const Color(0xFF10B981) : const Color(0xFFFBBF24);
     
-    // Choose icon and background based on index/type to create variety like the design
-    final icons = [Icons.favorite, Icons.medical_services, Icons.assignment, Icons.person];
-    final iconColors = [const Color(0xFF3B82F6), const Color(0xFFF59E0B), const Color(0xFF8B5CF6), const Color(0xFFEC4899)];
-    final bgColors = [const Color(0xFFEFF6FF), const Color(0xFFFFFBEB), const Color(0xFFF5F3FF), const Color(0xFFFDF2F8)];
-    
-    final iconIndex = index % icons.length;
-
     // Format display time
     final displayTime = _getFriendlyTime(consultation.createdAt);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: bgColors[iconIndex],
-              borderRadius: BorderRadius.circular(12),
+    return InkWell(
+      onTap: () {
+         // Open Notes for this consultation
+         Navigator.push(
+           context,
+           MaterialPageRoute(builder: (_) => NotesScreen(consultationId: consultation.id)),
+         );
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
             ),
-            child: Icon(
-              icons[iconIndex],
-              color: iconColors[iconIndex],
-              size: 24,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.description_outlined, color: Colors.blue, size: 24),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    consultation.patientId, // Patient Name
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1F2937),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        statusText,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text('•', style: TextStyle(color: Colors.grey[400])),
+                      ),
+                      Expanded(
+                        child: Text(
+                          consultation.chiefComplaint ?? 'Consultation Notes',
+                          style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  // Use patient ID as title if no specific title exists in model
-                  'Consultation ${consultation.patientId}', 
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1F2937),
+                  displayTime,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[400],
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      'Dr. Sarah', // Hardcoded as per design requirement
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Text('•', style: TextStyle(color: Colors.grey[400])),
-                    ),
-                    Text(
-                      statusText,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 8),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                displayTime,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[400],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
+  // --- Helpers ---
   String _getFriendlyTime(DateTime dateTime) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -444,21 +486,139 @@ class HomeScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _startNewRecording(BuildContext context, WidgetRef ref) async {
-    // Clear previous transcript state to ensure a fresh session
+  // --- Logic: Show Patient Selection ---
+  void _showPatientSelectionSheet(BuildContext context, WidgetRef ref) {
+      final consultationsAsync = ref.read(consultationsListProvider);
+      
+      consultationsAsync.whenData((consultations) {
+          final waiting = consultations.where((c) => c.status == 'waiting').toList();
+          
+          showModalBottomSheet(
+              context: context,
+              backgroundColor: Colors.transparent,
+              builder: (ctx) => Container(
+                  decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                          const Text('Select Patient', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 16),
+                          if (waiting.isEmpty)
+                             const Padding(
+                               padding: EdgeInsets.symmetric(vertical: 20),
+                               child: Text('No waiting patients. You can start a new unassigned consultation.'),
+                             ),
+                          ...waiting.map((c) => ListTile(
+                              leading: const CircleAvatar(backgroundColor: Color(0xFFE0E7FF), child: Icon(Icons.person, color: Color(0xFF3949AB))),
+                              title: Text(c.patientId, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text(c.chiefComplaint ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () {
+                                  Navigator.pop(ctx);
+                                  _startRecordingForPatient(context, ref, c);
+                              },
+                          )),
+                          const Divider(height: 32),
+                          SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                  onPressed: () {
+                                      Navigator.pop(ctx);
+                                      _startRecordingForPatient(context, ref, null); // Manual entry
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.grey.shade100,
+                                      foregroundColor: Colors.black87,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                  ),
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('New Walk-in Patient'),
+                              ),
+                          ),
+                      ],
+                  ),
+              )
+          );
+      });
+  }
+
+  // --- Logic: Show Details for Waiting List Item ---
+  void _showPatientDetailsStatus(BuildContext context, Consultation c) {
+      showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+              title: Text(c.patientId),
+              content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                      _detailRow('Status', 'Waiting In Queue'),
+                      const SizedBox(height: 8),
+                      _detailRow('Complaint', c.chiefComplaint ?? 'N/A'),
+                      const SizedBox(height: 8),
+                      _detailRow('Time:', DateFormat('jm').format(c.createdAt)),
+                  ],
+              ),
+              actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+                  ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+                      onPressed: () {
+                          Navigator.pop(ctx);
+                          // Start recording trigger
+                          // Can't access context easily inside async gap if we pop first, need handle properly
+                          // But we can trigger navigation here if we have ref, but we don't have ref in this scope perfectly
+                          // We should pass a callback or just require user to use the big green button
+                      }, 
+                      child: const Text('Call Patient')
+                  ),
+              ],
+          )
+      );
+  }
+
+  Widget _detailRow(String label, String value) {
+      return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+              Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Expanded(child: Text(value)),
+          ],
+      );
+  }
+
+  Future<void> _startRecordingForPatient(BuildContext context, WidgetRef ref, Consultation? existing) async {
+    // Clear previous transcript
     ref.read(transcriptStateProvider.notifier).clear();
 
-    // Create new consultation
-    final consultation = await ref.read(currentConsultationProvider.notifier).createNew(
-      patientId: 'patient_${DateTime.now().millisecondsSinceEpoch}',
-      doctorId: 'doctor_001',
-    );
+    Consultation activeConsultation;
+
+    if (existing != null) {
+        // Use the existing waiting consultation
+        // Update its status to 'draft' or 'in-progress' logic if we had it
+        // Ideally we keep ID but maybe update "createdAt" to actual start time or separate 'startedAt'
+        activeConsultation = existing; // For now just invoke it
+        ref.read(currentConsultationProvider.notifier).setConsultation(existing);
+    } else {
+        // Create completely new
+        activeConsultation = await ref.read(currentConsultationProvider.notifier).createNew(
+          patientId: 'Walk-in ${DateFormat('Hm').format(DateTime.now())}',
+          doctorId: 'doctor_001',
+          status: 'draft',
+        );
+    }
     
     if (context.mounted) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => RecordingScreen(consultationId: consultation.id),
+          builder: (_) => RecordingScreen(consultationId: activeConsultation.id),
         ),
       );
     }

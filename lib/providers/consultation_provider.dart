@@ -37,23 +37,34 @@ class CurrentConsultationNotifier extends StateNotifier<Consultation?> {
   Future<Consultation> createNew({
     required String patientId,
     required String doctorId,
+    String? chiefComplaint,
+    String status = 'draft',
   }) async {
     final consultation = Consultation(
       id: const Uuid().v4(),
       patientId: patientId,
       doctorId: doctorId,
+      chiefComplaint: chiefComplaint,
       audioDuration: 0,
       createdAt: DateTime.now(),
-      status: 'draft',
+      status: status,
       isEncrypted: false,
     );
     
     // Save to local database
     final dbService = _ref.read(databaseServiceProvider);
     await dbService.insertConsultation(consultation);
+
+    // Also add to list provider
+    _ref.read(consultationsListProvider.notifier).add(consultation);
     
     state = consultation;
     return consultation;
+  }
+
+  /// Set the current consultation
+  void setConsultation(Consultation c) {
+    state = c;
   }
   
   /// Update transcript
@@ -90,6 +101,9 @@ class CurrentConsultationNotifier extends StateNotifier<Consultation?> {
     final dbService = _ref.read(databaseServiceProvider);
     await dbService.updateConsultation(updated);
     
+    // Update in list
+    _ref.read(consultationsListProvider.notifier).update(updated);
+
     state = updated;
     return true;
   }
@@ -99,6 +113,7 @@ class CurrentConsultationNotifier extends StateNotifier<Consultation?> {
     if (state != null) {
       final dbService = _ref.read(databaseServiceProvider);
       await dbService.updateConsultation(state!);
+      _ref.read(consultationsListProvider.notifier).update(state!);
     }
   }
   
@@ -122,19 +137,65 @@ class ConsultationsListNotifier extends StateNotifier<AsyncValue<List<Consultati
     loadAll();
   }
   
-  /// Load all consultations
+  /// Load all consultations and seed mock waiting data if empty
   Future<void> loadAll() async {
     state = const AsyncValue.loading();
     
     try {
       final dbService = _ref.read(databaseServiceProvider);
-      final consultations = await dbService.getAllConsultations();
+      var consultations = await dbService.getAllConsultations();
+      
+      // If no consultations, or none are waiting, seed some waiting ones for the demo
+      if (consultations.isEmpty || !consultations.any((c) => c.status == 'waiting')) {
+         final mocks = _generateMockWaitingList();
+         for (var m in mocks) {
+           await dbService.insertConsultation(m);
+         }
+         consultations = await dbService.getAllConsultations();
+      }
+
       state = AsyncValue.data(consultations);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
   
+  List<Consultation> _generateMockWaitingList() {
+    final now = DateTime.now();
+    return [
+      Consultation(
+        id: const Uuid().v4(),
+        patientId: 'David Carter',
+        doctorId: 'doctor_001',
+        chiefComplaint: 'Severe migraine and sensitivity to light',
+        audioDuration: 0,
+        createdAt: now.add(const Duration(minutes: 15)), // "Waiting" for 15 mins from now effectively
+        status: 'waiting',
+        isEncrypted: false,
+      ),
+      Consultation(
+        id: const Uuid().v4(),
+        patientId: 'Emma Thompson',
+        doctorId: 'doctor_001',
+        chiefComplaint: 'Follow-up on hypertension medication',
+        audioDuration: 0,
+        createdAt: now.add(const Duration(minutes: 45)),
+        status: 'waiting',
+        isEncrypted: false,
+      ),
+      Consultation(
+        id: const Uuid().v4(),
+        patientId: 'Michael Rodriguez',
+        doctorId: 'doctor_001',
+        chiefComplaint: 'Left knee pain after falling',
+        audioDuration: 0,
+        createdAt: now.add(const Duration(hours: 1, minutes: 15)),
+        status: 'waiting',
+        isEncrypted: false,
+      ),
+    ];
+  }
+
   /// Refresh list
   Future<void> refresh() async {
     await loadAll();
@@ -143,7 +204,23 @@ class ConsultationsListNotifier extends StateNotifier<AsyncValue<List<Consultati
   /// Add consultation to list
   void add(Consultation consultation) {
     state.whenData((list) {
-      state = AsyncValue.data([consultation, ...list]);
+      if (!list.any((element) => element.id == consultation.id)) {
+        state = AsyncValue.data([consultation, ...list]);
+      }
+    });
+  }
+  
+  /// Update consultation in list
+  void update(Consultation consultation) {
+    state.whenData((list) {
+      final index = list.indexWhere((c) => c.id == consultation.id);
+      if (index != -1) {
+        final newList = List<Consultation>.from(list);
+        newList[index] = consultation;
+        state = AsyncValue.data(newList);
+      } else {
+        add(consultation);
+      }
     });
   }
   
@@ -155,16 +232,6 @@ class ConsultationsListNotifier extends StateNotifier<AsyncValue<List<Consultati
     state.whenData((list) {
       state = AsyncValue.data(list.where((c) => c.id != id).toList());
     });
-  }
-  
-  /// Get draft consultations
-  List<Consultation> getDrafts() {
-    return state.valueOrNull?.where((c) => c.status == 'draft').toList() ?? [];
-  }
-  
-  /// Get finalized consultations  
-  List<Consultation> getFinalized() {
-    return state.valueOrNull?.where((c) => c.status == 'finalized').toList() ?? [];
   }
 }
 

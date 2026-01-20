@@ -11,6 +11,7 @@ class Consultation {
   final String patientId;
   final String doctorId;
   final String? transcript;
+  final String? chiefComplaint;
   final Map<String, dynamic>? clinicalNotes;
   final int audioDuration;
   final DateTime createdAt;
@@ -23,6 +24,7 @@ class Consultation {
     required this.patientId,
     required this.doctorId,
     this.transcript,
+    this.chiefComplaint,
     this.clinicalNotes,
     required this.audioDuration,
     required this.createdAt,
@@ -41,6 +43,7 @@ class Consultation {
     String? patientId,
     String? doctorId,
     String? transcript,
+    String? chiefComplaint,
     Map<String, dynamic>? clinicalNotes,
     int? audioDuration,
     DateTime? createdAt,
@@ -53,6 +56,7 @@ class Consultation {
         patientId: patientId ?? this.patientId,
         doctorId: doctorId ?? this.doctorId,
         transcript: transcript ?? this.transcript,
+        chiefComplaint: chiefComplaint ?? this.chiefComplaint,
         clinicalNotes: clinicalNotes ?? this.clinicalNotes,
         audioDuration: audioDuration ?? this.audioDuration,
         createdAt: createdAt ?? this.createdAt,
@@ -78,6 +82,7 @@ class Consultation {
 /// Consultation Status enum
 enum ConsultationStatus {
   draft,
+  waiting,
   reviewed,
   finalized,
 }
@@ -87,6 +92,8 @@ extension ConsultationStatusExtension on ConsultationStatus {
     switch (this) {
       case ConsultationStatus.draft:
         return 'draft';
+      case ConsultationStatus.waiting:
+        return 'waiting';
       case ConsultationStatus.reviewed:
         return 'reviewed';
       case ConsultationStatus.finalized:
@@ -98,6 +105,8 @@ extension ConsultationStatusExtension on ConsultationStatus {
     switch (status) {
       case 'draft':
         return ConsultationStatus.draft;
+      case 'waiting':
+        return ConsultationStatus.waiting;
       case 'reviewed':
         return ConsultationStatus.reviewed;
       case 'finalized':
