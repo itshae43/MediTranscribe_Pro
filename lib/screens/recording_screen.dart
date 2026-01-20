@@ -258,41 +258,47 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
                     ),
                   ),
                   
-                  // List
+                  // List with visible scrollbar
                   Expanded(
-                    child: ListView.builder(
+                    child: Scrollbar(
                       controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-                      itemCount: transcriptState.speakerSegments.length + (transcriptState.partialTranscript.isNotEmpty ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        // Handle partial transcript item (last item)
-                        if (index == transcriptState.speakerSegments.length) {
+                      thumbVisibility: true,
+                      radius: const Radius.circular(8),
+                      thickness: 6,
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                        itemCount: transcriptState.speakerSegments.length + (transcriptState.partialTranscript.isNotEmpty ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          // Handle partial transcript item (last item)
+                          if (index == transcriptState.speakerSegments.length) {
+                            return _buildTranscriptItem(
+                              speaker: 'LISTENING',
+                              text: transcriptState.partialTranscript,
+                              isPartial: true,
+                            );
+                          }
+
+                          // Handle finalized segments
+                          final segment = transcriptState.speakerSegments[index];
+                          // Heuristic mapping: Speaker 0/A -> Doctor, Speaker 1/B -> Patient
+                          // For now we trust the service, but let's override based on label if it's generic
+                          String displaySpeaker = segment.speaker;
+                          if (displaySpeaker == '0' || displaySpeaker == 'A' || displaySpeaker == 'SPEAKER_00') {
+                            displaySpeaker = 'DOCTOR';
+                          } else if (displaySpeaker == '1' || displaySpeaker == 'B' || displaySpeaker == 'SPEAKER_01') {
+                            displaySpeaker = 'PATIENT';
+                          } else if (displaySpeaker == 'SPEAKER') {
+                             // Keep generic if unknown
+                          }
+
                           return _buildTranscriptItem(
-                            speaker: 'LISTENING',
-                            text: transcriptState.partialTranscript,
-                            isPartial: true,
+                            speaker: displaySpeaker,
+                            text: segment.text,
+                            timestamp: _formatTimestamp(segment.timestamp),
                           );
-                        }
-
-                        // Handle finalized segments
-                        final segment = transcriptState.speakerSegments[index];
-                        // Heuristic mapping: Speaker 0/A -> Doctor, Speaker 1/B -> Patient
-                        // For now we trust the service, but let's override based on label if it's generic
-                        String displaySpeaker = segment.speaker;
-                        if (displaySpeaker == '0' || displaySpeaker == 'A' || displaySpeaker == 'SPEAKER_00') {
-                          displaySpeaker = 'DOCTOR';
-                        } else if (displaySpeaker == '1' || displaySpeaker == 'B' || displaySpeaker == 'SPEAKER_01') {
-                          displaySpeaker = 'PATIENT';
-                        } else if (displaySpeaker == 'SPEAKER') {
-                           // Keep generic if unknown
-                        }
-
-                        return _buildTranscriptItem(
-                          speaker: displaySpeaker,
-                          text: segment.text,
-                          timestamp: _formatTimestamp(segment.timestamp),
-                        );
-                      },
+                        },
+                      ),
                     ),
                   ),
                 ],
