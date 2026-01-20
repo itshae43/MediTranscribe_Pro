@@ -241,71 +241,105 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildWaitingCard(BuildContext context, WidgetRef ref, Consultation consultation) {
-    // Show time as "10:30 AM" or similar based on created/scheduled time
     final timeStr = DateFormat('jm').format(consultation.createdAt);
 
     return InkWell(
       onTap: () => _showPatientDetailsStatus(context, ref, consultation),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        width: 220,
-        padding: const EdgeInsets.all(16),
+        width: 260,
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade100),
-          boxShadow: AppTheme.shadowElevation1,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              AppTheme.backgroundColor,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.primaryColor.withOpacity(0.1), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryColor.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            // Header Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // Type Badge
                 Container(
-                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                   decoration: BoxDecoration(
-                     color: AppTheme.backgroundColor,
-                     borderRadius: BorderRadius.circular(8),
-                   ),
-                   child: Row(
-                     children: [
-                       Icon(Icons.access_time, size: 12, color: AppTheme.textSecondary),
-                       const SizedBox(width: 4),
-                       Text(
-                         timeStr, 
-                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                           fontWeight: FontWeight.w600,
-                           color: AppTheme.textPrimary,
-                         ),
-                       ),
-                     ],
-                   ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppTheme.secondaryColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    consultation.consultationType ?? 'Consultation',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppTheme.secondaryColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
-                Icon(Icons.more_horiz, color: AppTheme.textSecondary),
+                // Time
+                Row(
+                  children: [
+                    Icon(Icons.schedule, size: 14, color: AppTheme.textSecondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      timeStr,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
+            
+            const SizedBox(height: 12),
+            
+            // Patient Info
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                 Text(
-                   consultation.patientId,
-                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                     fontWeight: FontWeight.w600,
-                   ),
-                   maxLines: 1, 
-                   overflow: TextOverflow.ellipsis
-                 ),
-                 const SizedBox(height: 4),
-                 Text(
-                   consultation.chiefComplaint ?? 'No details provided',
-                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                     color: AppTheme.textSecondary,
-                   ),
-                   maxLines: 2,
-                   overflow: TextOverflow.ellipsis,
-                 ),
+                // Patient Name
+                Text(
+                  consultation.patientId,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                    color: AppTheme.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                
+                // Chief Complaint
+                Text(
+                  consultation.chiefComplaint ?? 'No details provided',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                    height: 1.3,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ],
