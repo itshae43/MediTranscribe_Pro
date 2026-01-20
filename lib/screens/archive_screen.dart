@@ -216,7 +216,10 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     // Sort keys? Today first, then Yesterday, then dates.
     // Since we likely process most recent first, insertion order might be fine if list is sorted.
     // Let's assume input list is sorted by date desc. If not, sort keys.
-    final sortedKeys = grouped.keys.toList(); // Should rely on list order for now
+    // Sort keys: Today first, then Yesterday, then others descending
+    final sortedKeys = grouped.keys.toList(); 
+    // We assume the input list is sorted, but strictly we might want to sort these keys based on date parsing if needed.
+    // For now, reliance on list order (if list is sorted desc) is simplest.
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -263,13 +266,18 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
   }
 
   List<Consultation> _filterConsultations(List<Consultation> items) {
-     if (_searchQuery.isEmpty) return items;
-     final q = _searchQuery.toLowerCase();
-     return items.where((c) => 
-        c.patientId.toLowerCase().contains(q) || 
-        c.doctorId.toLowerCase().contains(q) ||
-        (c.transcript?.toLowerCase().contains(q) ?? false)
-     ).toList();
+     List<Consultation> filteredList = items;
+     if (_searchQuery.isNotEmpty) {
+       final q = _searchQuery.toLowerCase();
+       filteredList = items.where((c) => 
+          c.patientId.toLowerCase().contains(q) || 
+          c.doctorId.toLowerCase().contains(q) ||
+          (c.transcript?.toLowerCase().contains(q) ?? false)
+       ).toList();
+     }
+     // Always sort descending by date
+     filteredList.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+     return filteredList;
   }
 
   Widget _buildEmptyState() {
@@ -365,7 +373,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                    'Dr. ${c.doctorId == 'doctor_001' ? 'Sarah Mitchell' : 'Unknown'}', // Use real name or mock map
+                    c.patientId, // Display Patient Name from ID field (as per mocks)
                     style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16, 
@@ -377,7 +385,8 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
                   text: TextSpan(
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 13, height: 1.4),
                     children: [
-                        TextSpan(text: 'ID: #${c.patientId.split('_').last.substring(0,5)} • ', style: const TextStyle(fontWeight: FontWeight.w600)),
+                        // Generate a pseudo-ID if patientId is a name
+                        TextSpan(text: 'ID: #${c.id.substring(0,6).toUpperCase()} • ', style: const TextStyle(fontWeight: FontWeight.w600)),
                         TextSpan(text: _getSnippet(c)),
                     ],
                   ),
