@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
 import '../config/theme.dart';
 import '../providers/consultation_provider.dart';
 import '../models/consultation.dart';
@@ -12,7 +13,6 @@ import '../providers/transcript_provider.dart';
 
 /// Home Screen
 /// Main dashboard showing recent consultations and quick actions
-
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -21,127 +21,142 @@ class HomeScreen extends ConsumerWidget {
     final consultationsAsync = ref.watch(consultationsListProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        title: const Text('🏥 MediTranscribe Pro'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.security),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ComplianceScreen()),
+      backgroundColor: const Color(0xFFF9FAFB), // Very light grey background
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.read(consultationsListProvider.notifier).refresh();
+          },
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 10),
+                // Header
+                _buildHeader(context),
+                
+                const SizedBox(height: 24),
+                
+                // Start New Consultation Card
+                _buildStartConsultationCard(context, ref)
+                    .animate()
+                    .fadeIn(duration: 400.ms)
+                    .slideY(begin: 0.1, end: 0),
+                
+                const SizedBox(height: 24),
+                
+                // Stats Row
+                _buildStatsRow(consultationsAsync)
+                    .animate()
+                    .fadeIn(delay: 200.ms, duration: 400.ms)
+                    .slideY(begin: 0.1, end: 0),
+                
+                const SizedBox(height: 32),
+                
+                // Recent Consultations
+                _buildRecentConsultationsSection(context, consultationsAsync)
+                    .animate()
+                    .fadeIn(delay: 400.ms, duration: 400.ms)
+                    .slideY(begin: 0.1, end: 0),
+              ],
             ),
-            tooltip: 'Compliance',
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-            tooltip: 'Settings',
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.read(consultationsListProvider.notifier).refresh();
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Quick Stats Card
-              _buildQuickStatsCard(context, consultationsAsync)
-                  .animate()
-                  .fadeIn(duration: 400.ms)
-                  .slideY(begin: 0.2, end: 0),
-              
-              const SizedBox(height: 24),
-              
-              // Quick Actions
-              _buildQuickActionsSection(context, ref)
-                  .animate()
-                  .fadeIn(delay: 200.ms, duration: 400.ms)
-                  .slideY(begin: 0.2, end: 0),
-              
-              const SizedBox(height: 24),
-              
-              // Recent Consultations
-              _buildRecentConsultationsSection(context, consultationsAsync)
-                  .animate()
-                  .fadeIn(delay: 400.ms, duration: 400.ms)
-                  .slideY(begin: 0.2, end: 0),
-            ],
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _startNewRecording(context, ref),
-        icon: const Icon(Icons.mic),
-        label: const Text('New Recording'),
-        backgroundColor: AppTheme.primaryColor,
-      )
-          .animate()
-          .fadeIn(delay: 600.ms, duration: 400.ms)
-          .scale(),
     );
   }
 
-  Widget _buildQuickStatsCard(
-    BuildContext context,
-    AsyncValue<List<Consultation>> consultationsAsync,
-  ) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+  Widget _buildHeader(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
-              children: [
-                Icon(Icons.analytics, color: AppTheme.primaryColor),
-                SizedBox(width: 8),
-                Text(
-                  'Overview',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+            Text(
+              'Good Morning,',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
             ),
-            const SizedBox(height: 20),
-            consultationsAsync.when(
-              data: (consultations) => Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+            const SizedBox(height: 4),
+            const Text(
+              'Dr. Sarah Mitchell',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+          ],
+        ),
+        // Add settings icon to allow navigation to settings even without AppBar
+        IconButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+          ),
+          icon: const Icon(Icons.settings, color: Colors.grey),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStartConsultationCard(BuildContext context, WidgetRef ref) {
+    return GestureDetector(
+      onTap: () => _startNewRecording(context, ref),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: const Color(0xFF10B981), // Emerald Green
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF10B981).withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildStatItem(
-                    'Total',
-                    consultations.length.toString(),
-                    Icons.folder,
-                    Colors.blue,
+                  const Text(
+                    'Start New Consultation',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                  _buildStatItem(
-                    'Drafts',
-                    consultations.where((c) => c.status == 'draft').length.toString(),
-                    Icons.edit_note,
-                    Colors.orange,
-                  ),
-                  _buildStatItem(
-                    'Finalized',
-                    consultations.where((c) => c.status == 'finalized').length.toString(),
-                    Icons.check_circle,
-                    Colors.green,
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tap to begin dictation',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
                   ),
                 ],
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text('Error: $e'),
+            ),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.mic,
+                color: Colors.white,
+                size: 32,
+              ),
             ),
           ],
         ),
@@ -149,110 +164,93 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: color, size: 28),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickActionsSection(BuildContext context, WidgetRef ref) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Quick Actions',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
+  Widget _buildStatsRow(AsyncValue<List<Consultation>> consultationsAsync) {
+    return consultationsAsync.when(
+      data: (consultations) {
+        final completed = consultations.length;
+        // Mock accuracy and safe status for design matching since we don't have real metrics yet
+        
+        return Row(
           children: [
             Expanded(
-              child: _buildActionCard(
-                'New Recording',
-                Icons.mic,
-                AppTheme.recordingActive,
-                () => _startNewRecording(context, ref),
+              child: _buildStatCard(
+                value: '$completed',
+                label: 'DONE',
+                valueColor: const Color(0xFF3B82F6), // Blue
+                icon: null,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildActionCard(
-                'View Archive',
-                Icons.archive,
-                AppTheme.primaryColor,
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ArchiveScreen()),
-                ),
+              child: _buildStatCard(
+                value: '98%',
+                label: 'ACC.',
+                valueColor: Color(0xFF10B981), // Green
+                icon: null,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                value: '',
+                label: 'SAFE',
+                valueColor: Color(0xFF1F2937), // Dark
+                icon: Icons.lock,
+                iconColor: Color(0xFF3B82F6),
               ),
             ),
           ],
-        ),
-      ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => const Text('Error'),
     );
   }
 
-  Widget _buildActionCard(
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 32),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+  Widget _buildStatCard({
+    required String value,
+    required String label,
+    required Color valueColor,
+    IconData? icon,
+    Color? iconColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-        ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (icon != null)
+            Icon(icon, color: iconColor, size: 28)
+          else
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: valueColor,
+              ),
+            ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF9CA3AF), // Grey
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -262,7 +260,6 @@ class HomeScreen extends ConsumerWidget {
     AsyncValue<List<Consultation>> consultationsAsync,
   ) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -272,6 +269,7 @@ class HomeScreen extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                color: Color(0xFF1F2937),
               ),
             ),
             TextButton(
@@ -283,142 +281,167 @@ class HomeScreen extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         consultationsAsync.when(
           data: (consultations) {
             if (consultations.isEmpty) {
               return _buildEmptyState();
             }
-            return ListView.builder(
+            // Take top 5 for "Recent"
+            final recent = consultations.take(5).toList();
+            return ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: consultations.take(5).length,
+              itemCount: recent.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
-                final consultation = consultations[index];
-                return _buildConsultationCard(context, consultation);
+                final consultation = recent[index];
+                return _buildConsultationItem(consultation, index);
               },
             );
           },
-          loading: () => const Center(
-            child: Padding(
-              padding: EdgeInsets.all(40),
-              child: CircularProgressIndicator(),
-            ),
-          ),
-          error: (e, _) => Center(
-            child: Text('Error loading consultations: $e'),
-          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
         ),
       ],
     );
   }
-
+  
   Widget _buildEmptyState() {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: const Padding(
-        padding: EdgeInsets.all(40),
-        child: Column(
-          children: [
-            Icon(
-              Icons.folder_open,
-              size: 48,
-              color: Colors.grey,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'No consultations yet',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Tap "New Recording" to get started',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
+    return Container(
+        padding: const EdgeInsets.all(30),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16)
         ),
-      ),
+        child: const Center(child: Text("No recent consultations"))
     );
   }
 
-  Widget _buildConsultationCard(BuildContext context, Consultation consultation) {
-    final statusColor = _getStatusColor(consultation.status);
+  Widget _buildConsultationItem(Consultation consultation, int index) {
+    // Map status to design terms
+    final statusText = consultation.status == 'finalized' ? 'Processed' : 'Processing';
+    final statusColor = consultation.status == 'finalized' ? const Color(0xFF10B981) : const Color(0xFFFBBF24);
     
-    return Card(
-      elevation: 1,
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+    // Choose icon and background based on index/type to create variety like the design
+    final icons = [Icons.favorite, Icons.medical_services, Icons.assignment, Icons.person];
+    final iconColors = [const Color(0xFF3B82F6), const Color(0xFFF59E0B), const Color(0xFF8B5CF6), const Color(0xFFEC4899)];
+    final bgColors = [const Color(0xFFEFF6FF), const Color(0xFFFFFBEB), const Color(0xFFF5F3FF), const Color(0xFFFDF2F8)];
+    
+    final iconIndex = index % icons.length;
+
+    // Format display time
+    final displayTime = _getFriendlyTime(consultation.createdAt);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-          child: Icon(
-            consultation.status == 'finalized' ? Icons.check_circle : Icons.edit_note,
-            color: statusColor,
-          ),
-        ),
-        title: Text(
-          'Patient: ${consultation.patientId}',
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              'Duration: ${consultation.formattedDuration}',
-              style: const TextStyle(fontSize: 12),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: bgColors[iconIndex],
+              borderRadius: BorderRadius.circular(12),
             ),
-            Text(
-              _formatDate(consultation.createdAt),
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            consultation.status.toUpperCase(),
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: statusColor,
+            child: Icon(
+              icons[iconIndex],
+              color: iconColors[iconIndex],
+              size: 24,
             ),
           ),
-        ),
-        onTap: () {
-          // Navigate to consultation details
-        },
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  // Use patient ID as title if no specific title exists in model
+                  'Consultation ${consultation.patientId}', 
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1F2937),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      'Dr. Sarah', // Hardcoded as per design requirement
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text('•', style: TextStyle(color: Colors.grey[400])),
+                    ),
+                    Text(
+                      statusText,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                displayTime,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[400],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'finalized':
-        return Colors.green;
-      case 'reviewed':
-        return Colors.blue;
-      case 'draft':
-      default:
-        return Colors.orange;
-    }
-  }
+  String _getFriendlyTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final date = DateTime(dateTime.year, dateTime.month, dateTime.day);
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} at ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    if (date == today) {
+      return DateFormat('hh:mm a').format(dateTime);
+    } else if (date == today.subtract(const Duration(days: 1))) {
+      return 'Yesterday';
+    } else {
+      return DateFormat('MMM d').format(dateTime);
+    }
   }
 
   Future<void> _startNewRecording(BuildContext context, WidgetRef ref) async {
@@ -441,4 +464,3 @@ class HomeScreen extends ConsumerWidget {
     }
   }
 }
-
