@@ -33,11 +33,10 @@ class HomeScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 10),
                 // Header
                 _buildHeader(context),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 
                 // Start New Consultation Card
                 _buildStartConsultationCard(context, ref)
@@ -68,45 +67,171 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
+  // --- Header ---
   Widget _buildHeader(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Good Morning,',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textSecondary,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Dr. Sarah Mitchell',
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontSize: 24,
-                color: AppTheme.textPrimary,
-              ),
-            ),
+    // Get current time for greeting
+    final hour = DateTime.now().hour;
+    String greeting;
+    IconData greetingIcon;
+    
+    if (hour < 12) {
+      greeting = 'Good Morning';
+      greetingIcon = Icons.wb_sunny_outlined;
+    } else if (hour < 17) {
+      greeting = 'Good Afternoon';
+      greetingIcon = Icons.wb_sunny;
+    } else {
+      greeting = 'Good Evening';
+      greetingIcon = Icons.nightlight_outlined;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryColor,
+            AppTheme.secondaryColor,
           ],
         ),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: AppTheme.shadowElevation1,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
-          child: IconButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Left: Greeting and Name
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Greeting with icon
+                Row(
+                  children: [
+                    Icon(
+                      greetingIcon,
+                      color: Colors.white.withOpacity(0.9),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$greeting,',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Colors.white.withOpacity(0.95),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                
+                // Doctor Name
+                Text(
+                  'Dr. Sarah Mitchell',
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                
+                const SizedBox(height: 8),
+                
+                // Specialty/Role Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    'General Practitioner',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            icon: const Icon(Icons.settings_outlined, color: AppTheme.textSecondary),
           ),
-        ),
-      ],
+          
+          // Right: Profile Avatar & Settings
+          Column(
+            children: [
+              // Avatar with online indicator
+              Stack(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                    ),
+                    child: CircleAvatar(
+                      radius: 28,
+                      backgroundColor: Colors.white,
+                      child: Text(
+                        'SM',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 2,
+                    bottom: 2,
+                    child: Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: AppTheme.successColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              
+              // Settings Button
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  ),
+                  icon: const Icon(Icons.settings_outlined, color: Colors.white, size: 22),
+                  padding: const EdgeInsets.all(8),
+                  constraints: const BoxConstraints(),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
