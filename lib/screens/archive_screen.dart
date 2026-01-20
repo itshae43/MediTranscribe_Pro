@@ -195,8 +195,9 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
 
   // --- LIST LOGIC ---
   Widget _buildGroupedList(List<Consultation> consultations) {
-    // 1. Filter
-    final filtered = _filterConsultations(consultations);
+    // 1. Filter for finalized consultations only (archive)
+    final finalizedOnly = consultations.where((c) => c.status == 'finalized').toList();
+    final filtered = _filterConsultations(finalizedOnly);
     
     if (filtered.isEmpty) {
       return _buildEmptyState();
@@ -393,14 +394,12 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
                       ),
                   ),
                   const SizedBox(height: 4),
-                  RichText(
-                    text: TextSpan(
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13, height: 1.4),
-                      children: [
-                          // Generate a pseudo-ID if patientId is a name
-                          TextSpan(text: 'ID: #${c.id.substring(0,6).toUpperCase()} • ', style: const TextStyle(fontWeight: FontWeight.w600)),
-                          TextSpan(text: _getSnippet(c)),
-                      ],
+                  Text(
+                    _getSnippet(c),
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 13,
+                      height: 1.4,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
