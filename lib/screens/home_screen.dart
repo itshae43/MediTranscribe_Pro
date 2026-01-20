@@ -233,7 +233,7 @@ class HomeScreen extends ConsumerWidget {
     final timeStr = DateFormat('jm').format(consultation.createdAt);
 
     return InkWell(
-      onTap: () => _showPatientDetailsStatus(context, consultation),
+      onTap: () => _showPatientDetailsStatus(context, ref, consultation),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         width: 200,
@@ -549,46 +549,97 @@ class HomeScreen extends ConsumerWidget {
   }
 
   // --- Logic: Show Details for Waiting List Item ---
-  void _showPatientDetailsStatus(BuildContext context, Consultation c) {
+  void _showPatientDetailsStatus(BuildContext context, WidgetRef ref, Consultation c) {
       showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-              title: Text(c.patientId),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Row(
+                children: [
+                   CircleAvatar(
+                     backgroundColor: Colors.blue.shade50,
+                     child: Text(c.patientId[0], style: TextStyle(color: Colors.blue.shade700)),
+                   ),
+                   const SizedBox(width: 12),
+                   Expanded(
+                     child: Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       children: [
+                         Text(c.patientId, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                         Text(c.consultationType?.toUpperCase() ?? 'GENERAL', style: TextStyle(fontSize: 12, color: Colors.grey.shade600, letterSpacing: 1)),
+                       ],
+                     ),
+                   ),
+                ],
+              ),
               content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                      _detailRow('Status', 'Waiting In Queue'),
+                      const Divider(),
                       const SizedBox(height: 8),
-                      _detailRow('Complaint', c.chiefComplaint ?? 'N/A'),
-                      const SizedBox(height: 8),
-                      _detailRow('Time:', DateFormat('jm').format(c.createdAt)),
+                      _detailRow('Status', 'Waiting In Queue', color: Colors.orange.shade700),
+                      const SizedBox(height: 12),
+                      _detailRow('Type', c.consultationType ?? 'Follow-up'),
+                      const SizedBox(height: 12),
+                      const Text('Chief Complaint:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Text(c.chiefComplaint ?? 'No details provided', style: const TextStyle(fontSize: 14)),
+                      ),
+                      const SizedBox(height: 12),
+                      _detailRow('Scheduled', DateFormat('jm').format(c.createdAt)),
                   ],
               ),
               actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
-                  ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx), 
+                    child: const Text('Close', style: TextStyle(color: Colors.grey))
+                  ),
+                  ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
                       onPressed: () {
                           Navigator.pop(ctx);
-                          // Start recording trigger
-                          // Can't access context easily inside async gap if we pop first, need handle properly
-                          // But we can trigger navigation here if we have ref, but we don't have ref in this scope perfectly
-                          // We should pass a callback or just require user to use the big green button
+                          // Trigger navigation after dialog closes
+                          _startRecordingForPatient(context, ref, c);
                       }, 
-                      child: const Text('Call Patient')
+                      icon: const Icon(Icons.call, size: 18),
+                      label: const Text('Call Patient')
                   ),
               ],
           )
       );
   }
 
-  Widget _detailRow(String label, String value) {
+  Widget _detailRow(String label, String value, {Color? color}) {
       return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-              Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
-              Expanded(child: Text(value)),
+              SizedBox(
+                width: 80,
+                child: Text('$label:', style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54)),
+              ),
+              Expanded(
+                child: Text(
+                  value, 
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600, 
+                    color: color ?? Colors.black87
+                  )
+                ),
+              ),
           ],
       );
   }

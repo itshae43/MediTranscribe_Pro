@@ -12,6 +12,7 @@ class Consultation {
   final String doctorId;
   final String? transcript;
   final String? chiefComplaint;
+  final String? consultationType; // 'New Patient', 'Follow-up', 'Urgent'
   final Map<String, dynamic>? clinicalNotes;
   final int audioDuration;
   final DateTime createdAt;
@@ -25,6 +26,7 @@ class Consultation {
     required this.doctorId,
     this.transcript,
     this.chiefComplaint,
+    this.consultationType,
     this.clinicalNotes,
     required this.audioDuration,
     required this.createdAt,
@@ -44,6 +46,7 @@ class Consultation {
     String? doctorId,
     String? transcript,
     String? chiefComplaint,
+    String? consultationType,
     Map<String, dynamic>? clinicalNotes,
     int? audioDuration,
     DateTime? createdAt,
@@ -57,6 +60,7 @@ class Consultation {
         doctorId: doctorId ?? this.doctorId,
         transcript: transcript ?? this.transcript,
         chiefComplaint: chiefComplaint ?? this.chiefComplaint,
+        consultationType: consultationType ?? this.consultationType,
         clinicalNotes: clinicalNotes ?? this.clinicalNotes,
         audioDuration: audioDuration ?? this.audioDuration,
         createdAt: createdAt ?? this.createdAt,
