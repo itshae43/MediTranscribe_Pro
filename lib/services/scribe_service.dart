@@ -82,6 +82,7 @@ class ScribeService {
         'vad_silence_threshold_secs': '1.5',
         'vad_threshold': '0.4',
         'include_timestamps': 'true',
+        'enable_speaker_diarization': 'true', // Enable speaker diarization
       });
 
       print('🔗 [STEP 2.1] Connecting to Scribe v2 Realtime: $baseEndpoint');
@@ -230,8 +231,10 @@ class ScribeService {
   void _handleCommittedTranscriptWithTimestamps(Map<String, dynamic> data) {
     final text = data['text'] ?? '';
     final words = data['words'] as List?;
+    final speakerId = data['speaker_id'] as int?; // Get speaker ID from diarization
     
     print('📝 [STEP 4.2] COMMITTED TEXT WITH TIMESTAMPS: "$text"');
+    print('   Speaker ID: $speakerId');
     if (words != null) {
       print('   Words count: ${words.length}');
     }
@@ -242,14 +245,21 @@ class ScribeService {
       
       print('📄 [STEP 4.4] Updated transcript (${_currentTranscript.length} chars)');
       
+      // Map speaker_id to Doctor/Patient
+      // Typically: speaker_id 0 = Doctor, speaker_id 1 = Patient
+      String speakerLabel = 'SPEAKER';
+      if (speakerId != null) {
+        speakerLabel = speakerId == 0 ? 'DOCTOR' : 'PATIENT';
+      }
+      
       final labelEntry = {
-        'speaker': 'SPEAKER',
+        'speaker': speakerLabel,
         'text': text.toString(),
       };
       _allSpeakerLabels.add(labelEntry);
       _speakerLabelsController?.add(List<Map<String, String>>.from(_allSpeakerLabels));
       
-      _logger.d('Committed transcript with timestamps: $text');
+      _logger.d('Committed transcript with timestamps - Speaker: $speakerLabel, Text: $text');
     }
   }
 
