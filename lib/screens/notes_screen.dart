@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
 import '../config/theme.dart';
 import '../providers/consultation_provider.dart';
 import '../models/clinical_note.dart';
 
 /// Notes Screen
-/// Displays auto-generated clinical notes from transcription
+/// Displays auto-generated clinical notes with a specific card UI design
+/// Features:
+/// - Colored vertical status bars on cards
+/// - Verified Doctor header
+/// - Collapsible/Expandable sections
+/// - Specific bottom action bar
 
 class NotesScreen extends ConsumerWidget {
   final String consultationId;
@@ -18,413 +24,391 @@ class NotesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // In a real app we would use conversationId to fetch data
+    // For now we use the active consultation from provider or fallbacks
     final consultation = ref.watch(currentConsultationProvider);
-
-    // Mock clinical notes (in production, these come from backend)
-    final mockNote = ClinicalNote(
-      consultationId: consultationId,
-      chiefComplaint: 'Patient presents with persistent headaches for the past 2 weeks, accompanied by mild dizziness.',
-      historyOfPresentIllness: 'The patient reports experiencing daily headaches, particularly in the morning. Pain is described as throbbing, rated 6/10 in intensity. No recent head trauma. Patient has been taking over-the-counter pain relievers with partial relief.',
-      diagnoses: [
-        'Tension-type headache (G44.2)',
-        'Possible hypertension - to be ruled out',
-      ],
-      medications: [
-        'Ibuprofen 400mg - as needed for pain',
-        'Consider starting Propranolol 10mg if headaches persist',
-      ],
-      procedures: [
-        'Blood pressure monitoring for 1 week',
-        'Complete Blood Count (CBC)',
-        'Basic Metabolic Panel',
-      ],
-      assessment: 'Patient appears well overall. Vital signs within normal limits except for slightly elevated BP (140/90). Neurological examination unremarkable. Most likely tension-type headache with possible contribution from stress and inadequate sleep.',
-      followUp: 'Return in 2 weeks for blood pressure review and assessment of headache frequency. If symptoms worsen or new symptoms develop, return sooner.',
-      extractedEntities: {
-        'symptoms': ['headache', 'dizziness', 'throbbing pain'],
-        'vitals': {'bp': '140/90', 'hr': '72'},
-        'medications_mentioned': ['ibuprofen', 'propranolol'],
-      },
-      generatedAt: DateTime.now(),
-    );
-
+    
+    // Mock Data for the design
+    // The design shows specific content, so we'll hardcode some defaults 
+    // but try to use dynamic data where possible
+    
     return Scaffold(
+      backgroundColor: Colors.grey.shade50, // Light background
       appBar: AppBar(
-        title: const Text('📋 Clinical Notes'),
-        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black87, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          'Consultation Notes',
+          style: TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () => _shareNotes(context),
-            tooltip: 'Share',
-          ),
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf),
-            onPressed: () => _exportPDF(context),
-            tooltip: 'Export PDF',
+            icon: const Icon(Icons.share_outlined, color: Color(0xFF5C6BC0)), // Purple/Blue icon
+            onPressed: () {},
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: Colors.grey.shade200, height: 1),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Success Banner
-            _buildSuccessBanner()
-                .animate()
-                .fadeIn(duration: 400.ms)
-                .slideY(begin: -0.2, end: 0),
-            
-            const SizedBox(height: 20),
-            
-            // Consultation Info Card
-            _buildInfoCard(consultation)
-                .animate()
-                .fadeIn(delay: 200.ms, duration: 400.ms),
-            
-            const SizedBox(height: 20),
-            
-            // Chief Complaint
-            _buildNoteSection(
-              'Chief Complaint',
-              mockNote.chiefComplaint,
-              Icons.report_problem_outlined,
-              Colors.orange,
-            ).animate().fadeIn(delay: 300.ms, duration: 400.ms),
-            
-            const SizedBox(height: 16),
-            
-            // History of Present Illness
-            _buildNoteSection(
-              'History of Present Illness',
-              mockNote.historyOfPresentIllness,
-              Icons.history,
-              Colors.blue,
-            ).animate().fadeIn(delay: 400.ms, duration: 400.ms),
-            
-            const SizedBox(height: 16),
-            
-            // Diagnoses
-            _buildListSection(
-              'Diagnoses',
-              mockNote.diagnoses,
-              Icons.medical_information,
-              Colors.purple,
-            ).animate().fadeIn(delay: 500.ms, duration: 400.ms),
-            
-            const SizedBox(height: 16),
-            
-            // Medications
-            _buildListSection(
-              'Medications',
-              mockNote.medications,
-              Icons.medication,
-              Colors.green,
-            ).animate().fadeIn(delay: 600.ms, duration: 400.ms),
-            
-            const SizedBox(height: 16),
-            
-            // Procedures/Tests
-            _buildListSection(
-              'Procedures & Tests',
-              mockNote.procedures,
-              Icons.science,
-              Colors.teal,
-            ).animate().fadeIn(delay: 700.ms, duration: 400.ms),
-            
-            const SizedBox(height: 16),
-            
-            // Assessment
-            _buildNoteSection(
-              'Assessment',
-              mockNote.assessment,
-              Icons.assessment,
-              Colors.indigo,
-            ).animate().fadeIn(delay: 800.ms, duration: 400.ms),
-            
-            const SizedBox(height: 16),
-            
-            // Follow-up
-            _buildNoteSection(
-              'Follow-up',
-              mockNote.followUp,
-              Icons.calendar_today,
-              Colors.red,
-            ).animate().fadeIn(delay: 900.ms, duration: 400.ms),
+            // 1. Doctor Profile Header
+            _buildDoctorHeader(consultation),
             
             const SizedBox(height: 24),
             
-            // Action Buttons
-            _buildActionButtons(context)
-                .animate()
-                .fadeIn(delay: 1000.ms, duration: 400.ms),
-            
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSuccessBanner() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.green.shade400, Colors.green.shade600],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.green.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.check_circle, color: Colors.white, size: 32),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Notes Generated Successfully!',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Clinical notes have been auto-generated from your transcription.',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(consultation) {
-    final date = consultation?.createdAt ?? DateTime.now();
-    final duration = consultation?.audioDuration ?? 0;
-    
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            _buildInfoItem(
-              'Date',
-              '${date.day}/${date.month}/${date.year}',
-              Icons.calendar_today,
-            ),
-            const SizedBox(width: 24),
-            _buildInfoItem(
-              'Duration',
-              '${duration ~/ 60}m ${duration % 60}s',
-              Icons.timer,
-            ),
-            const SizedBox(width: 24),
-            _buildInfoItem(
-              'Status',
-              'Finalized',
-              Icons.check_circle,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoItem(String label, String value, IconData icon) {
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(icon, color: AppTheme.primaryColor, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Text(
-            label,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNoteSection(
-    String title,
-    String content,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            Text(
-              content,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.6,
+            // 2. Chief Complaint Card (Red Bar)
+            _buildSectionCard(
+              title: 'CHIEF COMPLAINT',
+              contentWidget: const Text(
+                'Patient reports persistent dry cough for 3 weeks and mild shortness of breath.',
+                style: TextStyle(fontSize: 15, height: 1.4, color: Colors.black87, fontWeight: FontWeight.w500),
               ),
+              barColor: const Color(0xFFFF5252), // Red accent
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildListSection(
-    String title,
-    List<String> items,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${items.length}',
-                    style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            ...items.map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            
+            const SizedBox(height: 16),
+            
+            // 3. Diagnoses Card (Orange Bar)
+            _buildSectionCard(
+              title: 'DIAGNOSES',
+              contentWidget: Column(
                 children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 6),
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: const TextStyle(fontSize: 14, height: 1.4),
-                    ),
-                  ),
+                   _buildDiagnosisItem('Acute Bronchitis (J20.9)', 'Confirmed via physical exam', Icons.medical_services_outlined, Colors.orange),
+                   const SizedBox(height: 12),
+                   _buildDiagnosisItem('Seasonal Allergies', 'History of recurrence in Fall', Icons.history, Colors.orange),
                 ],
               ),
-            )),
+              barColor: Colors.orange, // Orange accent
+            ),
+
+            const SizedBox(height: 16),
+
+            // 4. Medications Card (Blue Bar)
+            _buildSectionCard(
+              title: 'MEDICATIONS',
+              contentWidget: Column(
+                children: [
+                   _buildMedicationItem('Albuterol Inhaler', '90mcg • 2 puffs q4h prn', Icons.medication),
+                   const SizedBox(height: 12),
+                   _buildMedicationItem('Zyrtec', '10mg • Daily', Icons.medication_liquid),
+                ],
+              ),
+              barColor: Colors.blueAccent, // Blue accent
+            ),
+
+            const SizedBox(height: 16),
+
+            // 5. Follow-up Card (Teal Bar)
+            _buildSectionCard(
+              title: 'FOLLOW-UP',
+              contentWidget: Row(
+                children: [
+                   Container(
+                     padding: const EdgeInsets.all(8),
+                     child: const Icon(Icons.calendar_month, color: Colors.teal),
+                   ),
+                   const SizedBox(width: 8),
+                   const Expanded(
+                     child: Text(
+                      'Return to clinic in 2 weeks if symptoms do not improve.',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, height: 1.3),
+                     ),
+                   )
+                ],
+              ),
+              barColor: Colors.teal, // Teal accent
+            ),
+
+            const SizedBox(height: 24),
+
+            // 6. Full Transcript Collapsible
+            _buildTranscriptCollapse(),
+
+            const SizedBox(height: 24),
+
+            // 7. Bottom Actions
+            _buildBottomActions(context),
+            
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildDoctorHeader(dynamic consultation) {
+    // Dates/Times
+    final now = DateTime.now();
+    final dateStr = DateFormat('MMM dd, yyyy').format(now);
+    
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Avatar with verified badge
+        Stack(
+          children: [
+            const CircleAvatar(
+              radius: 24,
+              backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=a042581f4e29026702d'), // Male doctor avatar
+            ),
+            Positioned(
+              right: -2,
+              bottom: -2,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                child: const Icon(Icons.check_circle, size: 16, color: Colors.green),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        // Name and Info
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+               const Row(
+                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                 children: [
+                    Text(
+                      'John Doe*', 
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+                    ),
+                    // Finalized badge
+                    // We can use a Container instead of built-in Chip to match design perfectly
+                 ],
+               ),
+               const SizedBox(height: 4),
+               Row(
+                 children: [
+                   Text(dateStr, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                   Padding(
+                     padding: const EdgeInsets.symmetric(horizontal: 6),
+                     child: Text('•', style: TextStyle(color: Colors.grey.shade400)),
+                   ),
+                   Icon(Icons.access_time_filled, size: 14, color: Colors.grey.shade600),
+                   const SizedBox(width: 4),
+                   Text('2m 14s', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                 ],
+               ),
+            ],
+          ),
+        ),
+        // Finalized Chip (aligned right)
+        Container(
+           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+           decoration: BoxDecoration(
+             color: Colors.green.shade50,
+             borderRadius: BorderRadius.circular(20),
+           ),
+           child: Row(
+             mainAxisSize: MainAxisSize.min,
+             children: [
+               Text('FINALIZED', style: TextStyle(color: Colors.green.shade700, fontSize: 10, fontWeight: FontWeight.bold)),
+               const SizedBox(width: 4),
+               Icon(Icons.check_circle, size: 12, color: Colors.green.shade700),
+             ],
+           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionCard({
+    required String title,
+    required Widget contentWidget,
+    required Color barColor,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+           BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 2)),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Colored Bar
+            Container(width: 4, color: barColor),
+            
+            // Warning/Icon strip logic? The design replaces the bar with the section color
+            // Design shows: A thin colored vertical strip on the far left.
+            
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header Row: Title + Edit
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          title, 
+                          style: TextStyle(
+                             color: Colors.grey.shade600, 
+                             fontSize: 11, 
+                             fontWeight: FontWeight.bold,
+                             letterSpacing: 0.5,
+                          )
+                        ),
+                        Text(
+                           'Edit',
+                           style: TextStyle(
+                             color: const Color(0xFF5C6BC0),
+                             fontSize: 12,
+                             fontWeight: FontWeight.w600,
+                           ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    contentWidget,
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiagnosisItem(String title, String subtitle, IconData icon, Color color) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+         Icon(icon, color: color, size: 20),
+         const SizedBox(width: 12),
+         Expanded(
+           child: Column(
+             crossAxisAlignment: CrossAxisAlignment.start,
+             children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(subtitle, style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+             ],
+           ),
+         )
+      ],
+    );
+  }
+
+  Widget _buildMedicationItem(String name, String dosage, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+           Container(
+             padding: const EdgeInsets.all(8),
+             decoration: const BoxDecoration(
+               color: Color(0xFFE8EAF6), // Light Indigo
+               shape: BoxShape.circle,
+             ),
+             child: const Icon(Icons.medication, color: Color(0xFF3949AB), size: 16),
+           ),
+           const SizedBox(width: 12),
+           Column(
+             crossAxisAlignment: CrossAxisAlignment.start,
+             children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(dosage, style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+             ],
+           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTranscriptCollapse() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: ExpansionTile(
+         leading: Container(
+           padding: const EdgeInsets.all(8),
+           decoration: BoxDecoration(
+             color: Colors.grey.shade100,
+             borderRadius: BorderRadius.circular(8),
+           ),
+           child: const Icon(Icons.description, color: Colors.grey, size: 20),
+         ),
+         title: const Text('Full Transcript', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+         subtitle: Text('View source audio text', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+         children: const [
+            Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'Doctor: How are you feeling today?\nPatient: I have had a dry cough for 3 weeks...\n(Transcript text goes here)',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+         ],
+      ),
+    );
+  }
+
+  Widget _buildBottomActions(BuildContext context) {
     return Column(
       children: [
         Row(
           children: [
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () => _editNotes(context),
-                icon: const Icon(Icons.edit),
-                label: const Text('Edit Notes'),
+                onPressed: () {},
                 style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3949AB), // Dark Blue/Indigo
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  elevation: 0,
                 ),
+                icon: const Icon(Icons.edit, size: 18),
+                label: const Text('Edit Notes', style: TextStyle(fontWeight: FontWeight.w600)),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () => _exportPDF(context),
-                icon: const Icon(Icons.picture_as_pdf),
-                label: const Text('Export PDF'),
+                onPressed: () {},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade600,
+                  backgroundColor: const Color(0xFFE53935), // Red
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  elevation: 0,
                 ),
+                icon: const Icon(Icons.picture_as_pdf, size: 18),
+                label: const Text('Export PDF', style: TextStyle(fontWeight: FontWeight.w600)),
               ),
             ),
           ],
@@ -434,37 +418,21 @@ class NotesScreen extends ConsumerWidget {
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: () {
-              Navigator.popUntil(context, (route) => route.isFirst);
+               // Navigate back to home
+               // Since we are deep in nav likely, we pop to root or specific route
+               Navigator.of(context).popUntil((route) => route.isFirst);
             },
-            icon: const Icon(Icons.home),
-            label: const Text('Back to Home'),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
+              side: BorderSide(color: Colors.grey.shade400),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              foregroundColor: const Color(0xFF3949AB),
             ),
+            icon: const Icon(Icons.home, size: 20),
+            label: const Text('Back to Home', style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ),
       ],
-    );
-  }
-
-  void _editNotes(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Edit functionality coming soon...')),
-    );
-  }
-
-  void _exportPDF(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Generating PDF export...')),
-    );
-  }
-
-  void _shareNotes(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Share functionality coming soon...')),
     );
   }
 }
