@@ -53,9 +53,9 @@ class TranscriptState {
     
     final buffer = StringBuffer();
     for (final segment in speakerSegments) {
-      buffer.writeln('[${segment.speaker}]: ${segment.text}');
+      buffer.writeln('[${segment.speaker}] ${segment.text}');
     }
-    return buffer.toString();
+    return buffer.toString().trim();
   }
 
   /// Get doctor segments only

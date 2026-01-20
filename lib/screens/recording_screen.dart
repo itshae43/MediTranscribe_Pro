@@ -85,7 +85,8 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
     final transcriptState = ref.read(transcriptStateProvider);
     final consultationNotifier = ref.read(currentConsultationProvider.notifier);
 
-    consultationNotifier.updateTranscript(transcriptState.transcript);
+    // Use formatted transcript with speaker labels
+    consultationNotifier.updateTranscript(transcriptState.formattedTranscript);
     await consultationNotifier.finalize();
 
     if (mounted) {
