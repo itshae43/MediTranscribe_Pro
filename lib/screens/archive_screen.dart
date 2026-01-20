@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../config/theme.dart';
 import '../providers/consultation_provider.dart';
 import '../models/consultation.dart';
 
 /// Archive Screen
-/// Displays all past consultations with search and filter
-
+/// Displays past consultations with a specific design:
+/// - Custom Blue Header with Search
+/// - Filter Chips (All Dates, Doctor, Status)
+/// - Date Grouped List
+/// - Card style with Time, Doctor Name, ID/Details, Status Icon + Lock
 class ArchiveScreen extends ConsumerStatefulWidget {
   const ArchiveScreen({super.key});
 
@@ -16,400 +21,409 @@ class ArchiveScreen extends ConsumerStatefulWidget {
 
 class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
   String _searchQuery = '';
-  String _statusFilter = 'all';
-  
+  // "All Dates" is the primary active filter in the design
+  String _selectedDateFilter = 'All Dates'; 
   final _searchController = TextEditingController();
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Watch the list of consultations
     final consultationsAsync = ref.watch(consultationsListProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('📁 Consultation Archive'),
-        centerTitle: true,
-      ),
+      backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Search and Filter Section
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // Search Bar
-                TextField(
-                  controller: _searchController,
-                  onChanged: (value) => setState(() => _searchQuery = value),
-                  decoration: InputDecoration(
-                    hintText: 'Search consultations...',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Filter Chips
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildFilterChip('All', 'all'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('Drafts', 'draft'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('Finalized', 'finalized'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('Synced', 'synced'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Consultation List
+          // 1. Custom Blue Header
+          _buildHeader(),
+
+          // 2. Filter Row
+          _buildFilterRow(),
+
+          // 3. Consultation List (Grouped)
           Expanded(
             child: consultationsAsync.when(
-              data: (consultations) {
-                final filtered = _filterConsultations(consultations);
-                
-                if (filtered.isEmpty) {
-                  return _buildEmptyState();
-                }
-                
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    return _buildConsultationCard(filtered[index]);
-                  },
-                );
-              },
+              data: (consultations) => _buildGroupedList(consultations),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, String value) {
-    final isSelected = _statusFilter == value;
-    
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() => _statusFilter = selected ? value : 'all');
-      },
-      selectedColor: AppTheme.primaryColor.withOpacity(0.2),
-      checkmarkColor: AppTheme.primaryColor,
-      labelStyle: TextStyle(
-        color: isSelected ? AppTheme.primaryColor : Colors.grey.shade700,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      // Floating Action Button
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Action for new recording?
+          // For now just print or show snackbar as design shows a generic mic button
+        },
+        backgroundColor: const Color(0xFF2E3E8C),
+        child: const Icon(Icons.mic, color: Colors.white),
       ),
     );
   }
 
-  List<Consultation> _filterConsultations(List<Consultation> consultations) {
-    var filtered = consultations;
+  // --- HEADER ---
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.only(top: 40, left: 16, right: 16, bottom: 20),
+      decoration: const BoxDecoration(
+        color: Color(0xFF2E3E8C), // Deep Blue #1A237E or similar
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Top Row: Back | Title | Settings
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildHeaderIcon(Icons.arrow_back, () {
+                 // If pushed from navigation, pop. 
+                 // If main tab, maybe do nothing or switch tab.
+                 // Assuming standard nav behavior for now.
+                 if (Navigator.canPop(context)) Navigator.pop(context);
+              }),
+              const Text(
+                'Archive',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              _buildHeaderIcon(Icons.settings, () {
+                // Navigate to Settings
+              }),
+            ],
+          ),
+          const SizedBox(height: 20),
+          
+          // Search Bar
+          TextField(
+            controller: _searchController,
+            onChanged: (val) => setState(() => _searchQuery = val),
+            style: const TextStyle(color: Colors.black87),
+            decoration: InputDecoration(
+              hintText: 'Search by patient, ID, or keyword...',
+              hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+              prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderIcon(IconData icon, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.white, size: 24),
+      ),
+    );
+  }
+
+  // --- FILTER ROW ---
+  Widget _buildFilterRow() {
+    return Container(
+      height: 60,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          // Active Filter (Deep Blue)
+          _buildFilterChip('All Dates', true, hasDropdown: true),
+          const SizedBox(width: 12),
+          // Inactive Filters (White with border)
+          _buildFilterChip('Dr. Evans', false, hasDropdown: true),
+          const SizedBox(width: 12),
+          _buildFilterChip('Completed', false, hasDropdown: false),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, bool isActive, {bool hasDropdown = false}) {
+    final bgColor = isActive ? const Color(0xFF2E3E8C) : Colors.white;
+    final textColor = isActive ? Colors.white : Colors.black87;
+    final borderColor = isActive ? Colors.transparent : Colors.grey.shade300;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+            ),
+          ),
+          if (hasDropdown) ...[
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down, color: textColor, size: 18),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // --- LIST LOGIC ---
+  Widget _buildGroupedList(List<Consultation> consultations) {
+    // 1. Filter
+    final filtered = _filterConsultations(consultations);
     
-    // Apply status filter
-    if (_statusFilter != 'all') {
-      if (_statusFilter == 'synced') {
-        filtered = filtered.where((c) => c.isSynced).toList();
-      } else {
-        filtered = filtered.where((c) => c.status == _statusFilter).toList();
-      }
+    if (filtered.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    // 2. Group by Date
+    // Map<String, List<Consultation>>
+    final grouped = <String, List<Consultation>>{};
+    
+    for (var c in filtered) {
+        final dateKey = _getDateGroupHeader(c.createdAt);
+        if (!grouped.containsKey(dateKey)) {
+            grouped[dateKey] = [];
+        }
+        grouped[dateKey]!.add(c);
     }
     
-    // Apply search filter
-    if (_searchQuery.isNotEmpty) {
-      final query = _searchQuery.toLowerCase();
-      filtered = filtered.where((c) {
-        return c.patientId.toLowerCase().contains(query) ||
-            c.doctorId.toLowerCase().contains(query) ||
-            (c.transcript?.toLowerCase().contains(query) ?? false);
-      }).toList();
-    }
-    
-    return filtered;
+    // Sort keys? Today first, then Yesterday, then dates.
+    // Since we likely process most recent first, insertion order might be fine if list is sorted.
+    // Let's assume input list is sorted by date desc. If not, sort keys.
+    final sortedKeys = grouped.keys.toList(); // Should rely on list order for now
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: sortedKeys.length + 1, // +1 for "Load older records" button
+      itemBuilder: (context, index) {
+        if (index == sortedKeys.length) {
+            return _buildLoadMoreButton();
+        }
+        
+        final key = sortedKeys[index];
+        final items = grouped[key]!;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                key.toUpperCase(),
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ),
+            ...items.map((c) => _buildConsultationCard(c)),
+          ],
+        );
+      },
+    );
+  }
+
+  String _getDateGroupHeader(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final checkDate = DateTime(date.year, date.month, date.day);
+
+    if (checkDate == today) return 'Today';
+    if (checkDate == yesterday) return 'Yesterday';
+    return DateFormat('MMMM yyyy').format(date); // e.g. JANUARY 2026
+  }
+
+  List<Consultation> _filterConsultations(List<Consultation> items) {
+     if (_searchQuery.isEmpty) return items;
+     final q = _searchQuery.toLowerCase();
+     return items.where((c) => 
+        c.patientId.toLowerCase().contains(q) || 
+        c.doctorId.toLowerCase().contains(q) ||
+        (c.transcript?.toLowerCase().contains(q) ?? false)
+     ).toList();
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.folder_open,
-            size: 64,
-            color: Colors.grey.shade400,
+      return Center(
+          child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                  Icon(Icons.search_off, size: 60, color: Colors.grey.shade300),
+                  const SizedBox(height: 10),
+                  Text("No results found", style: TextStyle(color: Colors.grey.shade500)),
+              ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            _searchQuery.isNotEmpty || _statusFilter != 'all'
-                ? 'No matching consultations'
-                : 'No consultations yet',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Completed consultations will appear here',
-            style: TextStyle(color: Colors.grey.shade500),
+      );
+  }
+
+  Widget _buildLoadMoreButton() {
+     return Center(
+       child: Padding(
+         padding: const EdgeInsets.symmetric(vertical: 24),
+         child: Container(
+           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+           decoration: BoxDecoration(
+             color: const Color(0xFFE8EAF6), // Light Indigo/Blue bg
+             borderRadius: BorderRadius.circular(8),
+           ),
+           child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                  Text(
+                    'Load older records',
+                    style: TextStyle(
+                        color: Color(0xFF2E3E8C),
+                        fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Icon(Icons.refresh, size: 18, color: Color(0xFF2E3E8C)),
+              ],
+           ),
+         ),
+       ),
+     );
+  }
+
+  // --- CARD DESIGN ---
+  Widget _buildConsultationCard(Consultation c) {
+    final timeStr = DateFormat('hh:mm').format(c.createdAt);
+    final amPm = DateFormat('a').format(c.createdAt);
+    
+    // Status Logic
+    final isFinalized = c.status == 'finalized';
+    final statusIcon = isFinalized ? Icons.check : Icons.hourglass_empty;
+    final statusBgColor = isFinalized ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0); // Light Green vs Light Orange
+    final statusIconColor = isFinalized ? Colors.green : Colors.orange;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildConsultationCard(Consultation consultation) {
-    final statusColor = _getStatusColor(consultation.status);
-    
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _viewConsultation(consultation),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Left: Time
+          Column(
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      consultation.status == 'finalized'
-                          ? Icons.check_circle
-                          : Icons.edit_note,
-                      color: statusColor,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Patient: ${consultation.patientId}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        Text(
-                          'Doctor: ${consultation.doctorId}',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    onSelected: (value) => _handleMenuAction(value, consultation),
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'view',
-                        child: Row(
-                          children: [
-                            Icon(Icons.visibility, size: 20),
-                            SizedBox(width: 8),
-                            Text('View'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'export',
-                        child: Row(
-                          children: [
-                            Icon(Icons.picture_as_pdf, size: 20),
-                            SizedBox(width: 8),
-                            Text('Export PDF'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, size: 20, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Delete', style: TextStyle(color: Colors.red)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              Text(
+                timeStr,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.black87,
+                ),
               ),
-              const Divider(height: 24),
-              Row(
-                children: [
-                  _buildInfoChip(
-                    Icons.timer,
-                    consultation.formattedDuration,
-                  ),
-                  const SizedBox(width: 12),
-                  _buildInfoChip(
-                    Icons.calendar_today,
-                    _formatDate(consultation.createdAt),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (consultation.isSynced)
-                          const Icon(Icons.cloud_done, size: 14, color: Colors.green),
-                        if (consultation.isSynced) const SizedBox(width: 4),
-                        Text(
-                          consultation.status.toUpperCase(),
-                          style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              Text(
+                amPm,
+                style: TextStyle(
+                  color: Colors.grey.shade500,
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoChip(IconData icon, String text) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: Colors.grey),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade700,
+          const SizedBox(width: 16),
+          
+          // Middle: Details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                    'Dr. ${c.doctorId == 'doctor_001' ? 'Sarah Mitchell' : 'Unknown'}', // Use real name or mock map
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16, 
+                        color: Colors.black87,
+                    ),
+                ),
+                const SizedBox(height: 4),
+                RichText(
+                  text: TextSpan(
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13, height: 1.4),
+                    children: [
+                        TextSpan(text: 'ID: #${c.patientId.split('_').last.substring(0,5)} • ', style: const TextStyle(fontWeight: FontWeight.w600)),
+                        TextSpan(text: _getSnippet(c)),
+                    ],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    );
-  }
+          const SizedBox(width: 8),
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'finalized':
-        return Colors.green;
-      case 'reviewed':
-        return Colors.blue;
-      default:
-        return Colors.orange;
-    }
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
-
-  void _viewConsultation(Consultation consultation) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Viewing consultation ${consultation.id}')),
-    );
-  }
-
-  void _handleMenuAction(String action, Consultation consultation) {
-    switch (action) {
-      case 'view':
-        _viewConsultation(consultation);
-        break;
-      case 'export':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Exporting PDF...')),
-        );
-        break;
-      case 'delete':
-        _confirmDelete(consultation);
-        break;
-    }
-  }
-
-  void _confirmDelete(Consultation consultation) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Consultation?'),
-        content: const Text(
-          'This action cannot be undone. Are you sure you want to delete this consultation?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              ref.read(consultationsListProvider.notifier).remove(consultation.id);
-              Navigator.pop(context);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+          // Right: Status + Lock
+          Column(
+              children: [
+                   Container(
+                     padding: const EdgeInsets.all(8),
+                     decoration: BoxDecoration(
+                         color: statusBgColor,
+                         shape: BoxShape.circle,
+                     ),
+                     child: Icon(statusIcon, color: statusIconColor, size: 20),
+                   ),
+                   const SizedBox(height: 8),
+                   Icon(Icons.lock, color: Colors.grey.shade300, size: 16),
+              ],
           ),
         ],
       ),
     );
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  String _getSnippet(Consultation c) {
+      if (c.transcript != null && c.transcript!.isNotEmpty) {
+          return c.transcript!;
+      }
+      return 'No transcript available for this consultation...';
   }
 }
