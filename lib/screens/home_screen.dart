@@ -21,7 +21,7 @@ class HomeScreen extends ConsumerWidget {
     final consultationsAsync = ref.watch(consultationsListProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -77,29 +77,34 @@ class HomeScreen extends ConsumerWidget {
           children: [
             Text(
               'Good Morning,',
-              style: TextStyle(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textSecondary,
                 fontSize: 16,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Dr. Sarah Mitchell',
-              style: TextStyle(
+              style: Theme.of(context).textTheme.displaySmall?.copyWith(
                 fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1F2937),
+                color: AppTheme.textPrimary,
               ),
             ),
           ],
         ),
-        IconButton(
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: AppTheme.shadowElevation1,
           ),
-          icon: const Icon(Icons.settings, color: Colors.grey),
+          child: IconButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+            icon: const Icon(Icons.settings_outlined, color: AppTheme.textSecondary),
+          ),
         ),
       ],
     );
@@ -112,11 +117,11 @@ class HomeScreen extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: const Color(0xFF10B981), // Emerald Green
-          borderRadius: BorderRadius.circular(24),
+          color: AppTheme.primaryColor, // Medical Blue
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF10B981).withOpacity(0.3),
+              color: AppTheme.primaryColor.withOpacity(0.3),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -128,19 +133,17 @@ class HomeScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Start New Consultation',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Tap to select a patient from the queue',
-                    style: TextStyle(
-                      fontSize: 14,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.white.withOpacity(0.9),
                     ),
                   ),
@@ -154,7 +157,7 @@ class HomeScreen extends ConsumerWidget {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.mic,
+                Icons.mic_none_outlined,
                 color: Colors.white,
                 size: 32,
               ),
@@ -178,25 +181,34 @@ class HomeScreen extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             RichText(
-              text: const TextSpan(
-                style: TextStyle(
+              text: TextSpan(
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w600,
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937),
                 ),
                 children: [
-                  TextSpan(text: 'Waiting '),
-                  TextSpan(text: 'Queue', style: TextStyle(color: Color(0xFF3B82F6))), // Blue highlight
+                  const TextSpan(text: 'Waiting '),
+                  TextSpan(
+                    text: 'Queue', 
+                    style: TextStyle(color: AppTheme.secondaryColor), // Brand Blue
+                  ),
                 ],
               ),
             ),
             Container(
-               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                decoration: BoxDecoration(
-                 color: Colors.blue.withOpacity(0.1),
-                 borderRadius: BorderRadius.circular(12),
+                 color: AppTheme.secondaryColor.withOpacity(0.1),
+                 borderRadius: BorderRadius.circular(999), // Pill shape
                ),
-               child: const Text('Next Up', style: TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.bold)),
+               child: Text(
+                 'Next Up', 
+                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                   color: AppTheme.secondaryColor, 
+                   fontWeight: FontWeight.bold
+                 ),
+               ),
             ),
           ],
         ),
@@ -234,21 +246,15 @@ class HomeScreen extends ConsumerWidget {
 
     return InkWell(
       onTap: () => _showPatientDetailsStatus(context, ref, consultation),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        width: 200,
+        width: 220,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.blue.withOpacity(0.1)),
-          boxShadow: [
-             BoxShadow(
-               color: Colors.blue.withOpacity(0.05),
-               blurRadius: 10,
-               offset: const Offset(0, 4),
-             ),
-          ],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade100),
+          boxShadow: AppTheme.shadowElevation1,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,12 +266,24 @@ class HomeScreen extends ConsumerWidget {
                 Container(
                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                    decoration: BoxDecoration(
-                     color: Colors.grey.shade100,
+                     color: AppTheme.backgroundColor,
                      borderRadius: BorderRadius.circular(8),
                    ),
-                   child: Text(timeStr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
+                   child: Row(
+                     children: [
+                       Icon(Icons.access_time, size: 12, color: AppTheme.textSecondary),
+                       const SizedBox(width: 4),
+                       Text(
+                         timeStr, 
+                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                           fontWeight: FontWeight.w600,
+                           color: AppTheme.textPrimary,
+                         ),
+                       ),
+                     ],
+                   ),
                 ),
-                const Icon(Icons.more_horiz, color: Colors.grey),
+                Icon(Icons.more_horiz, color: AppTheme.textSecondary),
               ],
             ),
             Column(
@@ -273,14 +291,18 @@ class HomeScreen extends ConsumerWidget {
               children: [
                  Text(
                    consultation.patientId,
-                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                     fontWeight: FontWeight.w600,
+                   ),
                    maxLines: 1, 
                    overflow: TextOverflow.ellipsis
                  ),
                  const SizedBox(height: 4),
                  Text(
                    consultation.chiefComplaint ?? 'No details provided',
-                   style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                     color: AppTheme.textSecondary,
+                   ),
                    maxLines: 2,
                    overflow: TextOverflow.ellipsis,
                  ),
@@ -302,12 +324,12 @@ class HomeScreen extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Recent Consultations',
-              style: TextStyle(
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1F2937),
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
               ),
             ),
             TextButton(
@@ -363,7 +385,7 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildConsultationItem(BuildContext context, Consultation consultation, int index) {
     final statusText = consultation.status == 'finalized' ? 'Processed' : 'Draft';
-    final statusColor = consultation.status == 'finalized' ? const Color(0xFF10B981) : const Color(0xFFFBBF24);
+    final statusColor = consultation.status == 'finalized' ? AppTheme.successColor : const Color(0xFFFBBF24); // Success Green or Warning Orange
     
     // Format display time
     final displayTime = _getFriendlyTime(consultation.createdAt);
@@ -376,29 +398,24 @@ class HomeScreen extends ConsumerWidget {
            MaterialPageRoute(builder: (_) => NotesScreen(consultationId: consultation.id)),
          );
       },
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade100),
+          boxShadow: AppTheme.shadowElevation1,
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
+                color: AppTheme.secondaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.description_outlined, color: Colors.blue, size: 24),
+              child: const Icon(Icons.description_outlined, color: AppTheme.secondaryColor, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -407,10 +424,9 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   Text(
                     consultation.patientId, // Patient Name
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1F2937),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -420,9 +436,8 @@ class HomeScreen extends ConsumerWidget {
                     children: [
                       Text(
                         statusText,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[500],
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textSecondary,
                         ),
                       ),
                       Padding(
@@ -432,7 +447,9 @@ class HomeScreen extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           consultation.chiefComplaint ?? 'Consultation Notes',
-                          style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.textSecondary,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -448,10 +465,9 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 Text(
                   displayTime,
-                  style: TextStyle(
-                    fontSize: 12,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey[400],
+                    color: AppTheme.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 8),

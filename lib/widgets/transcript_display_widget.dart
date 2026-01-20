@@ -44,7 +44,7 @@ class TranscriptDisplayWidget extends StatelessWidget {
                 width: 8,
                 height: 8,
                 decoration: const BoxDecoration(
-                  color: Colors.red,
+                  color: AppTheme.errorColor,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -52,7 +52,7 @@ class TranscriptDisplayWidget extends StatelessWidget {
               const Text(
                 'Live',
                 style: TextStyle(
-                  color: Colors.red,
+                  color: AppTheme.errorColor,
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),
@@ -87,7 +87,7 @@ class TranscriptDisplayWidget extends StatelessWidget {
                   width: 8,
                   height: 8,
                   decoration: const BoxDecoration(
-                    color: Colors.red,
+                    color: AppTheme.errorColor,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -95,7 +95,7 @@ class TranscriptDisplayWidget extends StatelessWidget {
                 const Text(
                   'Live Transcription',
                   style: TextStyle(
-                    color: Colors.red,
+                    color: AppTheme.errorColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -120,8 +120,8 @@ class TranscriptDisplayWidget extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: isDoctor
-                        ? Colors.blue.shade100
-                        : Colors.green.shade100,
+                        ? AppTheme.primaryColor.withOpacity(0.1)
+                        : AppTheme.successColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -130,8 +130,8 @@ class TranscriptDisplayWidget extends StatelessWidget {
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: isDoctor
-                          ? Colors.blue.shade800
-                          : Colors.green.shade800,
+                          ? AppTheme.primaryColor
+                          : AppTheme.successColor,
                     ),
                   ),
                 ),

@@ -33,16 +33,16 @@ class NotesScreen extends ConsumerWidget {
     // but try to use dynamic data where possible
     
     return Scaffold(
-      backgroundColor: Colors.grey.shade50, // Light background
+      backgroundColor: AppTheme.backgroundColor, // Light background
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black87, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
+        title: Text(
           'Consultation Notes',
-          style: TextStyle(
-            color: Colors.black87,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            color: AppTheme.textPrimary,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
@@ -52,7 +52,7 @@ class NotesScreen extends ConsumerWidget {
         centerTitle: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.share_outlined, color: Color(0xFF5C6BC0)), // Purple/Blue icon
+            icon: const Icon(Icons.share_outlined, color: AppTheme.secondaryColor), // Brand Blue
             onPressed: () {},
           ),
         ],
@@ -78,7 +78,7 @@ class NotesScreen extends ConsumerWidget {
                 'Patient reports persistent dry cough for 3 weeks and mild shortness of breath.',
                 style: TextStyle(fontSize: 15, height: 1.4, color: Colors.black87, fontWeight: FontWeight.w500),
               ),
-              barColor: const Color(0xFFFF5252), // Red accent
+              barColor: AppTheme.errorColor, // Red accent
             ),
             
             const SizedBox(height: 16),
@@ -93,7 +93,7 @@ class NotesScreen extends ConsumerWidget {
                    _buildDiagnosisItem('Seasonal Allergies', 'History of recurrence in Fall', Icons.history, Colors.orange),
                 ],
               ),
-              barColor: Colors.orange, // Orange accent
+              barColor: AppTheme.warningColor, // Orange accent
             ),
 
             const SizedBox(height: 16),
@@ -108,7 +108,7 @@ class NotesScreen extends ConsumerWidget {
                    _buildMedicationItem('Zyrtec', '10mg • Daily', Icons.medication_liquid),
                 ],
               ),
-              barColor: Colors.blueAccent, // Blue accent
+              barColor: AppTheme.secondaryColor, // Blue accent
             ),
 
             const SizedBox(height: 16),
@@ -120,18 +120,21 @@ class NotesScreen extends ConsumerWidget {
                 children: [
                    Container(
                      padding: const EdgeInsets.all(8),
-                     child: const Icon(Icons.calendar_month, color: Colors.teal),
+                     child: const Icon(Icons.calendar_month, color: AppTheme.successColor),
                    ),
                    const SizedBox(width: 8),
-                   const Expanded(
+                   Expanded(
                      child: Text(
                       'Return to clinic in 2 weeks if symptoms do not improve.',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, height: 1.3),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        height: 1.3,
+                      ),
                      ),
-                   )
+                   ),
                 ],
               ),
-              barColor: Colors.teal, // Teal accent
+               barColor: AppTheme.successColor, // Teal/Green accent
             ),
 
             const SizedBox(height: 24),
@@ -214,15 +217,15 @@ class NotesScreen extends ConsumerWidget {
         Container(
            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
            decoration: BoxDecoration(
-             color: Colors.green.shade50,
+             color: AppTheme.successColor.withOpacity(0.1),
              borderRadius: BorderRadius.circular(20),
            ),
            child: Row(
              mainAxisSize: MainAxisSize.min,
              children: [
-               Text('FINALIZED', style: TextStyle(color: Colors.green.shade700, fontSize: 10, fontWeight: FontWeight.bold)),
+               Text('FINALIZED', style: TextStyle(color: AppTheme.successColor, fontSize: 10, fontWeight: FontWeight.bold)),
                const SizedBox(width: 4),
-               Icon(Icons.check_circle, size: 12, color: Colors.green.shade700),
+               Icon(Icons.check_circle, size: 12, color: AppTheme.successColor),
              ],
            ),
         ),
@@ -276,7 +279,7 @@ class NotesScreen extends ConsumerWidget {
                         Text(
                            'Edit',
                            style: TextStyle(
-                             color: const Color(0xFF5C6BC0),
+                             color: AppTheme.secondaryColor,
                              fontSize: 12,
                              fontWeight: FontWeight.w600,
                            ),
@@ -386,7 +389,7 @@ class NotesScreen extends ConsumerWidget {
               child: ElevatedButton.icon(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3949AB), // Dark Blue/Indigo
+                  backgroundColor: AppTheme.primaryColor, // Dark Blue
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -401,7 +404,7 @@ class NotesScreen extends ConsumerWidget {
               child: ElevatedButton.icon(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE53935), // Red
+                  backgroundColor: AppTheme.errorColor, // Red
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -426,7 +429,7 @@ class NotesScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 14),
               side: BorderSide(color: Colors.grey.shade400),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              foregroundColor: const Color(0xFF3949AB),
+              foregroundColor: AppTheme.primaryColor,
             ),
             icon: const Icon(Icons.home, size: 20),
             label: const Text('Back to Home', style: TextStyle(fontWeight: FontWeight.w600)),

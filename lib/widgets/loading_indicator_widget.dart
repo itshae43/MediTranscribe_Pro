@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import '../config/theme.dart';
 
 /// Loading Indicator Widget
 /// Various loading states for the app
@@ -30,7 +31,7 @@ class LoadingIndicatorWidget extends StatelessWidget {
             Text(
               message!,
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: AppTheme.textSecondary,
                 fontSize: 14,
               ),
             ),

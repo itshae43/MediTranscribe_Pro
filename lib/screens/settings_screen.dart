@@ -22,7 +22,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     // The design has a deep blue header and a light grey body
     // We can interpret this as a column with the header container and then the scrollable content
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6), // Light grey background
+      backgroundColor: AppTheme.backgroundColor, // Light grey background
       body: Column(
         children: [
           // 1. Custom Blue Header
@@ -60,7 +60,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                      child: ElevatedButton.icon(
                        onPressed: () {},
                        style: ElevatedButton.styleFrom(
-                         backgroundColor: const Color(0xFF2E3E8C),
+                         backgroundColor: AppTheme.primaryColor,
                          shape: RoundedRectangleBorder(
                            borderRadius: BorderRadius.circular(12),
                          ),
@@ -102,7 +102,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Container(
       padding: const EdgeInsets.only(top: 50, bottom: 20, left: 16, right: 16),
       width: double.infinity,
-      color: const Color(0xFF2E3E8C), // Royal Blue
+      color: AppTheme.primaryColor, // Medical Blue
       child: Center(
         child: Row(
           children: [
@@ -167,7 +167,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                ),
                const SizedBox(width: 16),
                // Name & Details
-               const Expanded(
+               Expanded(
                  child: Column(
                    crossAxisAlignment: CrossAxisAlignment.start,
                    children: [
@@ -176,11 +176,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                        style: TextStyle(
                          fontSize: 18,
                          fontWeight: FontWeight.bold,
-                         color: Color(0xFF1E3A8A), // Dark blue text
+                         color: AppTheme.primaryColor, // Dark blue text
                        ),
                      ),
-                     SizedBox(height: 4),
-                     Text(
+                     const SizedBox(height: 4),
+                     const Text(
                        'Cardiology • ID: 8942-A',
                        style: TextStyle(
                          fontSize: 14,
@@ -200,7 +200,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onPressed: () {},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF2E3E8C),
+                    foregroundColor: AppTheme.primaryColor,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -216,8 +216,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: OutlinedButton.icon(
                   onPressed: () {},
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF2E3E8C),
-                    side: const BorderSide(color: Color(0xFF2E3E8C), width: 0.5),
+                    foregroundColor: AppTheme.primaryColor,
+                    side: const BorderSide(color: AppTheme.primaryColor, width: 0.5),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -326,7 +326,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 TextButton(
                   onPressed: () {},
-                  child: const Text('View Keys', style: TextStyle(color: Color(0xFF2E3E8C), fontWeight: FontWeight.bold)),
+                  child: const Text('View Keys', style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -363,7 +363,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Container(
                    padding: const EdgeInsets.all(8),
                    decoration: BoxDecoration(color: Colors.blue.shade50, shape: BoxShape.circle),
-                   child: const Icon(Icons.cloud_queue, size: 24, color: Color(0xFF2E3E8C)),
+                   child: const Icon(Icons.cloud_queue, size: 24, color: AppTheme.primaryColor),
                 ),
                 const SizedBox(width: 16),
                 const Text('Cloud Storage', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
@@ -382,7 +382,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
            Row(
              mainAxisAlignment: MainAxisAlignment.spaceBetween,
              children: [
-               const Text('12.5 GB Used', style: TextStyle(color: Color(0xFF2E3E8C), fontWeight: FontWeight.bold, fontSize: 12)),
+               const Text('12.5 GB Used', style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold, fontSize: 12)),
                Text('50 GB Total', style: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.bold, fontSize: 12)),
              ],
            ),
@@ -400,11 +400,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                ),
                Container(
                  height: 8,
-                 width: 100, // Approx 25% of width
-                 decoration: BoxDecoration(
-                   color: const Color(0xFF2E3E8C),
-                   borderRadius: BorderRadius.circular(4),
-                 ),
+                  width: 100, // Approx 25% of width
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                ),
              ],
            ),

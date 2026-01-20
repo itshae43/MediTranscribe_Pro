@@ -37,7 +37,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     final consultationsAsync = ref.watch(consultationsListProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.backgroundColor,
       body: Column(
         children: [
           // 1. Custom Blue Header
@@ -60,9 +60,8 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Action for new recording?
-          // For now just print or show snackbar as design shows a generic mic button
         },
-        backgroundColor: const Color(0xFF2E3E8C),
+        backgroundColor: AppTheme.warningColor, // Orange for Action
         child: const Icon(Icons.mic, color: Colors.white),
       ),
     );
@@ -73,11 +72,8 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     return Container(
       padding: const EdgeInsets.only(top: 40, left: 16, right: 16, bottom: 20),
       decoration: const BoxDecoration(
-        color: Color(0xFF2E3E8C), // Deep Blue #1A237E or similar
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
+        color: AppTheme.primaryColor, // Medical Blue
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Column(
         children: [
@@ -91,12 +87,11 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
                  // Assuming standard nav behavior for now.
                  if (Navigator.canPop(context)) Navigator.pop(context);
               }),
-              const Text(
+              Text(
                 'Archive',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               _buildHeaderIcon(Icons.settings, () {
@@ -166,8 +161,8 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
   }
 
   Widget _buildFilterChip(String label, bool isActive, {bool hasDropdown = false}) {
-    final bgColor = isActive ? const Color(0xFF2E3E8C) : Colors.white;
-    final textColor = isActive ? Colors.white : Colors.black87;
+    final bgColor = isActive ? AppTheme.primaryColor : Colors.white;
+    final textColor = isActive ? Colors.white : AppTheme.textPrimary;
     final borderColor = isActive ? Colors.transparent : Colors.grey.shade300;
 
     return Container(
@@ -296,24 +291,24 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
          padding: const EdgeInsets.symmetric(vertical: 24),
          child: Container(
            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-           decoration: BoxDecoration(
-             color: const Color(0xFFE8EAF6), // Light Indigo/Blue bg
-             borderRadius: BorderRadius.circular(8),
-           ),
-           child: const Row(
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.1), // Light Blue bg
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                   Text(
                     'Load older records',
                     style: TextStyle(
-                        color: Color(0xFF2E3E8C),
+                        color: AppTheme.primaryColor,
                         fontWeight: FontWeight.w600,
                     ),
                   ),
-                  SizedBox(width: 8),
-                  Icon(Icons.refresh, size: 18, color: Color(0xFF2E3E8C)),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.refresh, size: 18, color: AppTheme.primaryColor),
               ],
-           ),
+            ),
          ),
        ),
      );
@@ -327,23 +322,17 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     // Status Logic
     final isFinalized = c.status == 'finalized';
     final statusIcon = isFinalized ? Icons.check : Icons.hourglass_empty;
-    final statusBgColor = isFinalized ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0); // Light Green vs Light Orange
-    final statusIconColor = isFinalized ? Colors.green : Colors.orange;
+    final statusBgColor = isFinalized ? AppTheme.successColor.withOpacity(0.1) : Colors.orange.withOpacity(0.1); 
+    final statusIconColor = isFinalized ? AppTheme.successColor : Colors.orange;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: AppTheme.shadowElevation1,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

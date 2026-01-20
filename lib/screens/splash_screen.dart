@@ -43,7 +43,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             end: Alignment.bottomCenter,
             colors: [
               AppTheme.primaryColor,
-              AppTheme.primaryColorDark,
+              AppTheme.secondaryColor,
             ],
           ),
         ),

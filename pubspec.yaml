@@ -71,6 +71,7 @@ dependencies:
 
   # Flutter dotenv
   flutter_dotenv: ^5.1.0
+  google_fonts: ^7.0.2
 
 dev_dependencies:
   flutter_test:

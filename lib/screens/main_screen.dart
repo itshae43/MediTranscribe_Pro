@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../config/theme.dart';
 import 'home_screen.dart';
 import 'archive_screen.dart';
 import 'settings_screen.dart';
@@ -20,8 +21,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   final List<Widget> _screens = [
     const HomeScreen(),
     const ArchiveScreen(),
-    const ComplianceScreen(), // Using Compliance as Alerts placeholder for now
-    const SettingsScreen(),   // Using Settings as Profile placeholder
+    const ComplianceScreen(), // Security Hub
+    const SettingsScreen(),   // Profile Settings
   ];
 
   @override
@@ -33,24 +34,25 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.surfaceColor,
+          border: const Border(top: BorderSide(color: Color(0xFFE5E7EB))),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
-              blurRadius: 20,
+              blurRadius: 10,
               offset: const Offset(0, -5),
             ),
           ],
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(0, 'Home', Icons.home_rounded, Icons.home_outlined),
-                _buildNavItem(1, 'Archive', Icons.folder_rounded, Icons.folder_outlined),
-                _buildNavItem(2, 'Alerts', Icons.notifications_rounded, Icons.notifications_outlined),
+                _buildNavItem(0, 'Dashboard', Icons.grid_view_rounded, Icons.grid_view_outlined),
+                _buildNavItem(1, 'Archive', Icons.folder_open_rounded, Icons.folder_open_outlined),
+                _buildNavItem(2, 'Security', Icons.shield_rounded, Icons.shield_outlined),
                 _buildNavItem(3, 'Profile', Icons.person_rounded, Icons.person_outline_rounded),
               ],
             ),
@@ -62,17 +64,23 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   Widget _buildNavItem(int index, String label, IconData activeIcon, IconData inactiveIcon) {
     final isSelected = _currentIndex == index;
-    final activeColor = const Color(0xFF2E3E8C); // Royal Blue
-    final inactiveColor = Colors.grey.shade400;
+    final activeColor = AppTheme.primaryColor;
+    final inactiveColor = AppTheme.textSecondary;
 
     return InkWell(
       onTap: () {
         setState(() => _currentIndex = index);
       },
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Column(
+        decoration: isSelected 
+          ? BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            )
+          : null,
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedSwitcher(
@@ -84,18 +92,21 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 isSelected ? activeIcon : inactiveIcon,
                 key: ValueKey(isSelected),
                 color: isSelected ? activeColor : inactiveColor,
-                size: 26,
+                size: 24,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? activeColor : inactiveColor,
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              ),
-            ).animate(target: isSelected ? 1 : 0).tint(color: activeColor),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: activeColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
+                ),
+              ).animate().fadeIn(duration: 200.ms).slideX(begin: -0.2, end: 0),
+            ]
           ],
         ),
       ),

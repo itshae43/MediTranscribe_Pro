@@ -60,8 +60,8 @@ class ComplianceScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
             colors: [
-              Colors.green.shade400,
-              Colors.green.shade600,
+              AppTheme.successColor.withOpacity(0.8),
+              AppTheme.successColor,
             ],
           ),
         ),
@@ -113,7 +113,7 @@ class ComplianceScreen extends ConsumerWidget {
                   Text(
                     'Active',
                     style: TextStyle(
-                      color: Colors.green,
+                      color: AppTheme.successColor,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -162,12 +162,12 @@ class ComplianceScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: isEnabled ? Colors.green.shade50 : Colors.grey.shade100,
+              color: isEnabled ? AppTheme.successColor.withOpacity(0.1) : Colors.grey.shade100,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               isEnabled ? Icons.check_circle : Icons.cancel,
-              color: isEnabled ? Colors.green : Colors.grey,
+              color: isEnabled ? AppTheme.successColor : Colors.grey,
               size: 20,
             ),
           ),
@@ -214,7 +214,7 @@ class ComplianceScreen extends ConsumerWidget {
                   'Data at Rest',
                   'AES-256 Encryption',
                   Icons.lock,
-                  Colors.blue,
+                  AppTheme.primaryColor,
                 ),
                 const Divider(height: 24),
                 _buildEncryptionItem(
@@ -228,7 +228,7 @@ class ComplianceScreen extends ConsumerWidget {
                   'Key Management',
                   'Secure Key Storage',
                   Icons.key,
-                  Colors.orange,
+                  AppTheme.warningColor,
                 ),
               ],
             ),
@@ -273,7 +273,7 @@ class ComplianceScreen extends ConsumerWidget {
             ],
           ),
         ),
-        const Icon(Icons.check_circle, color: Colors.green),
+        const Icon(Icons.check_circle, color: AppTheme.successColor),
       ],
     );
   }
@@ -389,11 +389,11 @@ class ComplianceScreen extends ConsumerWidget {
   Color _getActionColor(String action) {
     switch (action) {
       case 'CREATE':
-        return Colors.blue;
+        return AppTheme.primaryColor;
       case 'ENCRYPT':
         return Colors.purple;
       case 'GENERATE':
-        return Colors.green;
+        return AppTheme.successColor;
       case 'DELETE':
         return Colors.red;
       default:

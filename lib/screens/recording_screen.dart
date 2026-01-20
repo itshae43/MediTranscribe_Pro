@@ -126,7 +126,7 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2E3E8C),
+        backgroundColor: AppTheme.primaryColor,
         elevation: 0,
         leading: IconButton(
           icon: Container(
@@ -182,10 +182,10 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'RECORDING...',
-                        style: TextStyle(
-                          color: Colors.red,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.errorColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                           letterSpacing: 1,
@@ -199,11 +199,11 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
                 // Big Timer
                 Text(
                   recordingState.formattedDuration,
-                  style: const TextStyle(
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
                     fontSize: 56,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1F36),
-                    fontFamily: 'Monospace',
+                    color: AppTheme.textPrimary,
+                    fontFamily: 'Monospace', // Keep monospace for timer stability
                     letterSpacing: -1,
                   ),
                 ),
@@ -358,7 +358,7 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
                             ),
                             child: Icon(
                               recordingState.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                              color: const Color(0xFF2E3E8C),
+                              color: AppTheme.primaryColor,
                               size: 32,
                             ),
                           ),
@@ -370,7 +370,7 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
                           child: ElevatedButton(
                             onPressed: _finalizeConsultation,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFF6B00),
+                              backgroundColor: AppTheme.warningColor, // Orange
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 20),
                               shape: RoundedRectangleBorder(
@@ -387,7 +387,7 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
                                     color: Colors.white,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.stop, color: Color(0xFFFF6B00), size: 16),
+                                  child: Icon(Icons.stop, color: AppTheme.warningColor, size: 16),
                                 ),
                                 const SizedBox(width: 12),
                                 const Text(
@@ -423,8 +423,8 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
   }) {
     final isDoctor = speaker.toUpperCase() == 'DOCTOR' || speaker.toUpperCase().contains('DOC'); // Loose matching
     // Use the reference design colors
-    final labelBgColor = isDoctor ? const Color(0xFFE8F1FF) : (isPartial ? Colors.grey[100] : const Color(0xFFF3F4F6));
-    final labelColor = isDoctor ? const Color(0xFF2E3E8C) : (isPartial ? Colors.grey : const Color(0xFF64748B));
+    final labelBgColor = isDoctor ? AppTheme.primaryColor.withOpacity(0.1) : (isPartial ? Colors.grey[100] : AppTheme.backgroundColor);
+    final labelColor = isDoctor ? AppTheme.primaryColor : (isPartial ? Colors.grey : AppTheme.textSecondary);
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
@@ -519,7 +519,7 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
               width: 4,
               height: height,
               decoration: BoxDecoration(
-                color: const Color(0xFF00C853).withOpacity(0.8),
+                color: AppTheme.successColor.withOpacity(0.8),
                 borderRadius: BorderRadius.circular(4),
               ),
             );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/theme.dart';
 
 /// Audio Visualizer Widget
 /// Displays audio amplitude as animated bars
@@ -58,7 +59,7 @@ class CircularAudioVisualizerWidget extends StatelessWidget {
     super.key,
     required this.amplitude,
     this.size = 120,
-    this.activeColor = Colors.red,
+    this.activeColor = AppTheme.primaryColor,
     this.inactiveColor = Colors.grey,
   });
 
