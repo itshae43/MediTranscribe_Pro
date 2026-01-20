@@ -261,7 +261,7 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
                   Expanded(
                     child: ListView.builder(
                       controller: _scrollController,
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
                       itemCount: transcriptState.speakerSegments.length + (transcriptState.partialTranscript.isNotEmpty ? 1 : 0),
                       itemBuilder: (context, index) {
                         // Handle partial transcript item (last item)
@@ -275,8 +275,19 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
 
                         // Handle finalized segments
                         final segment = transcriptState.speakerSegments[index];
+                        // Heuristic mapping: Speaker 0/A -> Doctor, Speaker 1/B -> Patient
+                        // For now we trust the service, but let's override based on label if it's generic
+                        String displaySpeaker = segment.speaker;
+                        if (displaySpeaker == '0' || displaySpeaker == 'A' || displaySpeaker == 'SPEAKER_00') {
+                          displaySpeaker = 'DOCTOR';
+                        } else if (displaySpeaker == '1' || displaySpeaker == 'B' || displaySpeaker == 'SPEAKER_01') {
+                          displaySpeaker = 'PATIENT';
+                        } else if (displaySpeaker == 'SPEAKER') {
+                           // Keep generic if unknown
+                        }
+
                         return _buildTranscriptItem(
-                          speaker: segment.speaker,
+                          speaker: displaySpeaker,
                           text: segment.text,
                           timestamp: _formatTimestamp(segment.timestamp),
                         );
@@ -287,117 +298,120 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
               ),
             ),
           ),
+          
+          // Bottom Controls (Now part of body for better layout control)
+          Container(
+            color: const Color(0xFFF8FAFC), // Match background of transcript
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 20,
+                    offset: Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Security Badge
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.lock, size: 12, color: Color(0xFF00C853)),
+                        const SizedBox(width: 6),
+                        Text(
+                          'HIPAA Secure & Encrypted 256-bit',
+                          style: TextStyle(
+                            color: const Color(0xFF00C853).withOpacity(0.8),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Controls
+                    Row(
+                      children: [
+                        // Pause Button
+                        InkWell(
+                          onTap: recordingState.isPaused
+                              ? ref.read(recordingStateProvider.notifier).resumeRecording
+                              : ref.read(recordingStateProvider.notifier).pauseRecording,
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Icon(
+                              recordingState.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                              color: const Color(0xFF2E3E8C),
+                              size: 32,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        
+                        // Stop Button
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _finalizeConsultation,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFF6B00),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.stop, color: Color(0xFFFF6B00), size: 16),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'STOP RECORDING',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
-      bottomSheet: Container(
-        color: const Color(0xFFF8FAFC), // Match background of transcript
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 20,
-                offset: Offset(0, -5),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Security Badge
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.lock, size: 12, color: Color(0xFF00C853)),
-                    const SizedBox(width: 6),
-                    Text(
-                      'HIPAA Secure & Encrypted 256-bit',
-                      style: TextStyle(
-                        color: const Color(0xFF00C853).withOpacity(0.8),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                
-                // Controls
-                Row(
-                  children: [
-                    // Pause Button
-                    InkWell(
-                      onTap: recordingState.isPaused
-                          ? ref.read(recordingStateProvider.notifier).resumeRecording
-                          : ref.read(recordingStateProvider.notifier).pauseRecording,
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Icon(
-                          recordingState.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                          color: const Color(0xFF2E3E8C),
-                          size: 32,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    
-                    // Stop Button
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _finalizeConsultation,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF6B00),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.stop, color: Color(0xFFFF6B00), size: 16),
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'STOP RECORDING',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      // bottomSheet removed
     );
   }
 
@@ -407,8 +421,10 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
     String? timestamp,
     bool isPartial = false,
   }) {
-    final isDoctor = speaker.toUpperCase() == 'DOCTOR';
-    final speakerColor = isDoctor ? const Color(0xFF2E3E8C) : (isPartial ? Colors.grey : const Color(0xFF64748B));
+    final isDoctor = speaker.toUpperCase() == 'DOCTOR' || speaker.toUpperCase().contains('DOC'); // Loose matching
+    // Use the reference design colors
+    final labelBgColor = isDoctor ? const Color(0xFFE8F1FF) : (isPartial ? Colors.grey[100] : const Color(0xFFF3F4F6));
+    final labelColor = isDoctor ? const Color(0xFF2E3E8C) : (isPartial ? Colors.grey : const Color(0xFF64748B));
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
@@ -416,34 +432,46 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> with TickerPr
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                '[${speaker.toUpperCase()}]',
-                style: TextStyle(
-                  color: speakerColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+              // Speaker Label Pill
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: labelBgColor,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '[${speaker.toUpperCase()}]',
+                  style: TextStyle(
+                    color: labelColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
               if (timestamp != null) ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 Text(
                   timestamp,
                   style: TextStyle(
                     color: Colors.grey[400],
                     fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             text,
             style: TextStyle(
-              color: isPartial ? Colors.grey[500] : const Color(0xFF334155),
+              color: isPartial ? Colors.grey[500] : const Color(0xFF1E293B), // Darker slate for better readability
               fontSize: 16,
               height: 1.5,
+              fontWeight: FontWeight.w400,
               fontStyle: isPartial ? FontStyle.italic : FontStyle.normal,
             ),
           ),

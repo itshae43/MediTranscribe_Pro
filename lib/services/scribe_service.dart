@@ -166,8 +166,8 @@ class ScribeService {
             _handlePartialTranscript(data);
             break;
           case 'committed_transcript':
-            print('✅ Processing committed transcript...');
-            _handleCommittedTranscript(data);
+            print('✅ Processing committed transcript (SKIPPING to avoid duplication)...');
+            // _handleCommittedTranscript(data); // SKIPPED because we handle timestamped version
             break;
           case 'committed_transcript_with_timestamps':
             print('✅ Processing committed transcript with timestamps...');
