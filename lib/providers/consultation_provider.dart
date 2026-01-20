@@ -143,16 +143,18 @@ class ConsultationsListNotifier extends StateNotifier<AsyncValue<List<Consultati
     
     try {
       final dbService = _ref.read(databaseServiceProvider);
-      var consultations = await dbService.getAllConsultations();
       
-      // If no consultations, or none are waiting, seed some waiting ones for the demo
-      if (consultations.isEmpty || !consultations.any((c) => c.status == 'waiting')) {
-         final mocks = _generateMockWaitingList();
-         for (var m in mocks) {
-           await dbService.insertConsultation(m);
-         }
-         consultations = await dbService.getAllConsultations();
+      // FOR DEMO: Delete entire database and reseed with fresh data
+      await dbService.deleteDatabase();
+      
+      // After delete, the database will be recreated on first access
+      // Seed fresh mock data (5 waiting + 5 completed)
+      final mocks = _generateMockWaitingList();
+      for (var m in mocks) {
+        await dbService.insertConsultation(m);
       }
+      
+      final consultations = await dbService.getAllConsultations();
 
       state = AsyncValue.data(consultations);
     } catch (e, st) {

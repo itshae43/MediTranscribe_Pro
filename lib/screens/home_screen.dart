@@ -671,7 +671,11 @@ class HomeScreen extends ConsumerWidget {
           showModalBottomSheet(
               context: context,
               backgroundColor: Colors.transparent,
+              isScrollControlled: true, // Allow dynamic height
               builder: (ctx) => Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.6, // Max 60% of screen
+                  ),
                   decoration: const BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -688,16 +692,27 @@ class HomeScreen extends ConsumerWidget {
                                padding: EdgeInsets.symmetric(vertical: 20),
                                child: Text('No waiting patients. You can start a new unassigned consultation.'),
                              ),
-                          ...waiting.map((c) => ListTile(
-                              leading: const CircleAvatar(backgroundColor: Color(0xFFE0E7FF), child: Icon(Icons.person, color: Color(0xFF3949AB))),
-                              title: Text(c.patientId, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text(c.chiefComplaint ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () {
-                                  Navigator.pop(ctx);
-                                  _startRecordingForPatient(context, ref, c);
-                              },
-                          )),
+                          // Scrollable patient list
+                          if (waiting.isNotEmpty)
+                            Flexible(
+                              child: ListView.builder(
+                                shrinkWrap: true,
+                                itemCount: waiting.length,
+                                itemBuilder: (context, index) {
+                                  final c = waiting[index];
+                                  return ListTile(
+                                    leading: const CircleAvatar(backgroundColor: Color(0xFFE0E7FF), child: Icon(Icons.person, color: Color(0xFF3949AB))),
+                                    title: Text(c.patientId, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    subtitle: Text(c.chiefComplaint ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    trailing: const Icon(Icons.chevron_right),
+                                    onTap: () {
+                                        Navigator.pop(ctx);
+                                        _startRecordingForPatient(context, ref, c);
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
                           const Divider(height: 32),
                           SizedBox(
                               width: double.infinity,
@@ -790,8 +805,8 @@ class HomeScreen extends ConsumerWidget {
                           // Trigger navigation after dialog closes
                           _startRecordingForPatient(context, ref, c);
                       }, 
-                      icon: const Icon(Icons.call, size: 18),
-                      label: const Text('Call Patient')
+                      icon: const Icon(Icons.mic, size: 18),
+                      label: const Text('Start Recording')
                   ),
               ],
           )

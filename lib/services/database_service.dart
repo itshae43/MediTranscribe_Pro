@@ -11,7 +11,7 @@ class DatabaseService {
   final Logger _logger = Logger();
   
   static const String _dbName = 'meditranscribe.db';
-  static const int _dbVersion = 1;
+  static const int _dbVersion = 2; // Upgraded for chief_complaint and consultation_type
 
   /// Get database instance
   Future<Database> get database async {
@@ -50,6 +50,8 @@ class DatabaseService {
         id TEXT PRIMARY KEY,
         patient_id TEXT NOT NULL,
         doctor_id TEXT NOT NULL,
+        chief_complaint TEXT,
+        consultation_type TEXT,
         transcript TEXT,
         clinical_notes TEXT,
         audio_duration INTEGER DEFAULT 0,
@@ -113,7 +115,13 @@ class DatabaseService {
   /// Handle database upgrades
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     _logger.i('Upgrading database from v$oldVersion to v$newVersion');
-    // Add migration logic here for future versions
+    
+    if (oldVersion < 2) {
+      // Add chief_complaint and consultation_type columns
+      await db.execute('ALTER TABLE consultations ADD COLUMN chief_complaint TEXT');
+      await db.execute('ALTER TABLE consultations ADD COLUMN consultation_type TEXT');
+      _logger.i('Added chief_complaint and consultation_type columns');
+    }
   }
 
   // ==================== CONSULTATION OPERATIONS ====================
@@ -128,6 +136,8 @@ class DatabaseService {
           'id': consultation.id,
           'patient_id': consultation.patientId,
           'doctor_id': consultation.doctorId,
+          'chief_complaint': consultation.chiefComplaint,
+          'consultation_type': consultation.consultationType,
           'transcript': consultation.transcript,
           'clinical_notes': consultation.clinicalNotes?.toString(),
           'audio_duration': consultation.audioDuration,
@@ -388,6 +398,8 @@ class DatabaseService {
       id: map['id'] as String,
       patientId: map['patient_id'] as String,
       doctorId: map['doctor_id'] as String,
+      chiefComplaint: map['chief_complaint'] as String?,
+      consultationType: map['consultation_type'] as String?,
       transcript: map['transcript'] as String?,
       audioDuration: map['audio_duration'] as int? ?? 0,
       createdAt: DateTime.parse(map['created_at'] as String),
