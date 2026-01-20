@@ -20,7 +20,7 @@ cat .env
 
 **Expected Output:**
 ```
-ELEVENLABS_API_KEY=sk_1f6640ba771099c658d0136bf3048b3ef39c7e8ec14ae9a1
+ELEVENLABS_API_KEY=sk_your_api_key_here
 SCRIBE_V2_ENDPOINT=wss://api.elevenlabs.io/v1/speech-to-text/stream
 ```
 
@@ -210,7 +210,7 @@ pwd
 cat .env
 
 # If missing, create it:
-echo 'ELEVENLABS_API_KEY=sk_1f6640ba771099c658d0136bf3048b3ef39c7e8ec14ae9a1' > .env
+echo 'ELEVENLABS_API_KEY=sk_your_api_key_here' > .env
 echo 'SCRIBE_V2_ENDPOINT=wss://api.elevenlabs.io/v1/speech-to-text/stream' >> .env
 
 # Restart app

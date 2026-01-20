@@ -15,7 +15,7 @@ cat .env
 
 **Expected Output:**
 ```
-ELEVENLABS_API_KEY=sk_1f6640ba771099c658d0136bf3048b3ef39c7e8ec14ae9a1
+ELEVENLABS_API_KEY=sk_your_api_key_here
 SCRIBE_V2_ENDPOINT=wss://api.elevenlabs.io/v1/speech-to-text/stream
 ```
 
@@ -50,7 +50,7 @@ flutter run
 ```
 🔑 API Key loaded: true
 🌐 Endpoint: wss://api.elevenlabs.io/v1/speech-to-text/stream
-🔑 First 10 chars of key: sk_1f6640b...
+🔑 First 10 chars of key: sk_your_...'
 ```
 
 ✅ **Success:** All three lines print correctly  
