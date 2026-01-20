@@ -388,17 +388,92 @@ class NotesScreen extends ConsumerWidget {
          children: [
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Text(
-                hasTranscript 
-                  ? transcript 
-                  : 'No transcript was recorded for this consultation. The audio recording may not have been processed yet, or transcription was not enabled.',
-                style: TextStyle(
-                  color: hasTranscript ? Colors.black87 : Colors.grey.shade500,
-                  height: 1.5,
-                ),
-              ),
+              child: hasTranscript 
+                ? _buildFormattedTranscript(transcript)
+                : Text(
+                    'No transcript was recorded for this consultation. The audio recording may not have been processed yet, or transcription was not enabled.',
+                    style: TextStyle(
+                      color: Colors.grey.shade500,
+                      height: 1.5,
+                    ),
+                  ),
             ),
          ],
+      ),
+    );
+  }
+
+  Widget _buildFormattedTranscript(String transcript) {
+    // Parse transcript to identify speaker segments
+    // Format: "[DOCTOR] text" or "[PATIENT] text"
+    final lines = transcript.split('\n');
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: lines.map((line) {
+        if (line.trim().isEmpty) return const SizedBox(height: 8);
+        
+        // Check if line contains speaker label
+        final doctorMatch = RegExp(r'\[DOCTOR\]\s*(.*)').firstMatch(line);
+        final patientMatch = RegExp(r'\[PATIENT\]\s*(.*)').firstMatch(line);
+        
+        if (doctorMatch != null) {
+          return _buildSpeakerSegment('DOCTOR', doctorMatch.group(1) ?? '', AppTheme.primaryColor);
+        } else if (patientMatch != null) {
+          return _buildSpeakerSegment('PATIENT', patientMatch.group(1) ?? '', AppTheme.successColor);
+        } else {
+          // Plain text without label
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              line,
+              style: const TextStyle(
+                color: Colors.black87,
+                height: 1.5,
+                fontSize: 14,
+              ),
+            ),
+          );
+        }
+      }).toList(),
+    );
+  }
+
+  Widget _buildSpeakerSegment(String speaker, String text, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Speaker Label
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: color.withOpacity(0.3), width: 1),
+            ),
+            child: Text(
+              speaker,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Speaker Text
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.black87,
+              height: 1.5,
+              fontSize: 14,
+            ),
+          ),
+        ],
       ),
     );
   }
