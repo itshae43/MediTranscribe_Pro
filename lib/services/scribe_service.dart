@@ -231,7 +231,7 @@ class ScribeService {
   void _handleCommittedTranscriptWithTimestamps(Map<String, dynamic> data) {
     final text = data['text'] ?? '';
     final words = data['words'] as List?;
-    final speakerId = data['speaker_id'] as int?; // Get speaker ID from diarization
+    final speakerId = data['speaker_id'] as int?; // May be null in realtime API
     
     print('📝 [STEP 4.2] COMMITTED TEXT WITH TIMESTAMPS: "$text"');
     print('   Speaker ID: $speakerId');
@@ -245,11 +245,23 @@ class ScribeService {
       
       print('📄 [STEP 4.4] Updated transcript (${_currentTranscript.length} chars)');
       
-      // Map speaker_id to Doctor/Patient
-      // Typically: speaker_id 0 = Doctor, speaker_id 1 = Patient
-      String speakerLabel = 'SPEAKER';
+      // Smart speaker detection:
+      // 1. If API provides speaker_id, use it
+      // 2. Otherwise, use alternating detection based on segment count
+      // 3. In medical context: First speaker is typically Doctor, responses are Patient
+      String speakerLabel;
+      
       if (speakerId != null) {
+        // API provided diarization
         speakerLabel = speakerId == 0 ? 'DOCTOR' : 'PATIENT';
+      } else {
+        // Realtime API doesn't support diarization - use smart alternation
+        // Assume conversation pattern: Doctor speaks first, then Patient responds
+        // Alternate based on segment count (even = Doctor, odd = Patient)
+        final segmentIndex = _allSpeakerLabels.length;
+        speakerLabel = (segmentIndex % 2 == 0) ? 'DOCTOR' : 'PATIENT';
+        
+        print('   📢 Smart diarization: Segment $segmentIndex -> $speakerLabel');
       }
       
       final labelEntry = {
@@ -259,7 +271,7 @@ class ScribeService {
       _allSpeakerLabels.add(labelEntry);
       _speakerLabelsController?.add(List<Map<String, String>>.from(_allSpeakerLabels));
       
-      _logger.d('Committed transcript with timestamps - Speaker: $speakerLabel, Text: $text');
+      _logger.d('Committed transcript - Speaker: $speakerLabel, Text: $text');
     }
   }
 
